@@ -19,20 +19,25 @@ limitations under the License.
 
 package plugin
 
-import (
-	"golang.org/x/net/context"
+import "fmt"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
-)
+type Config map[string]interface{}
 
-//TODO(danielscottt): plugin panics
-
-type publisherProxy struct {
-	pluginProxy
-
-	plugin Publisher
+func (c Config) String(key string) (string, error) {
+	var (
+		val    interface{}
+		strout string
+		ok     bool
+	)
+	if val, ok = c[key]; !ok {
+		return strout, fmt.Errorf("config item %s not found", key)
+	}
+	if strout, ok = val.(string); !ok {
+		return strout, fmt.Errorf("config item %s is not a string", key)
+	}
+	return strout, nil
 }
 
-func (p *publisherProxy) Publish(ctx context.Context, arg *rpc.MetricsArg) (*rpc.ErrReply, error) {
-	return &rpc.ErrReply{}, nil
-}
+type ConfigTree struct{}
+
+type ConfigPolicy struct{}

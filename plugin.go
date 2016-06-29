@@ -26,19 +26,19 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/intelsdi-x/snap-plugin-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
 type Plugin interface {
-	GetConfigPolicy() config.ConfigPolicy
+	GetConfigPolicy() (ConfigPolicy, error)
 }
 
 // Collector is a plugin which is the source of new data in the Snap pipeline.
 type Collector interface {
 	Plugin
 
-	GetMetricTypes(config.Config) ([]Metric, error)
+	GetMetricTypes(Config) ([]Metric, error)
 	CollectMetrics([]Metric) ([]Metric, error)
 }
 
@@ -62,62 +62,52 @@ type Publisher interface {
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt) int {
-	m := newMeta(collectorType, name, version, opts)
+	m := newMeta(collectorType, name, version, opts...)
 	server := grpc.NewServer()
 	// TODO(danielscottt) SSL
 	proxy := &collectorProxy{
-		plugin: plugin,
-		pluginProxy: pluginProxy{
-			plugin: plugin,
-		},
+		plugin:      plugin,
+		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterCollectorServer(server, proxy)
-	return startPlugin(server, m)
+	return startPlugin(server, m, proxy.pluginProxy.halt)
 }
 
 // StartProcessor is given a Processor implementation and its metadata,
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt) int {
-	m := newMeta(processorType, name, version, opts)
+	m := newMeta(processorType, name, version, opts...)
 	server := grpc.NewServer()
 	// TODO(danielscottt) SSL
 	proxy := &processorProxy{
-		plugin: plugin,
-		pluginProxy: pluginProxy{
-			plugin: plugin,
-		},
+		plugin:      plugin,
+		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterProcessorServer(server, proxy)
-	return startPlugin(server, m)
+	return startPlugin(server, m, proxy.pluginProxy.halt)
 }
 
 // StartPublisher is given a Publisher implementation and its metadata,
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt) int {
-	m := newMeta(publisherType, name, version, opts)
+	m := newMeta(publisherType, name, version, opts...)
 	server := grpc.NewServer()
-	resp := handshakeResponse{
-		Type: PublisherPluginType,
-		Meta: m,
-	}
 	// TODO(danielscottt) SSL
 	proxy := &publisherProxy{
-		plugin: plugin,
-		pluginProxy: pluginProxy{
-			plugin: plugin,
-		},
+		plugin:      plugin,
+		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterPublisherServer(server, proxy)
-	return startPlugin(server, m)
+	return startPlugin(server, m, proxy.pluginProxy.halt)
 }
 
 type server interface {
 	Serve(net.Listener) error
 }
 
-func startPlugin(srv server, m meta) int {
+func startPlugin(srv server, m meta, halt <-chan struct{}) int {
 	//TODO(danielscottt): listen port
 	l, err := net.Listen("tcp", "127.0.0.1:9998")
 	if err != nil {
@@ -132,12 +122,13 @@ func startPlugin(srv server, m meta) int {
 	}()
 	// TODO(danielscottt): Resp generation
 	// Output response to stdout
-	metaJson, err := json.Marshal(meta)
+	metaJson, err := json.Marshal(m)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(metaJson))
 	// TODO(danielscottt): heartbeats
 	// TODO(danielscottt): exit code
+	<-halt
 	return 0
 }
