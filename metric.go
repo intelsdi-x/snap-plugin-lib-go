@@ -19,20 +19,4 @@ limitations under the License.
 
 package plugin
 
-import (
-	"golang.org/x/net/context"
-
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
-)
-
-//TODO(danielscottt): plugin panics
-
-type publisherProxy struct {
-	pluginProxy
-
-	plugin Publisher
-}
-
-func (p *publisherProxy) Publish(ctx context.Context, arg *rpc.MetricsArg) (*rpc.ErrReply, error) {
-	return &rpc.ErrReply{}, nil
-}
+type Metric struct{}

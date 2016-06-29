@@ -21,80 +21,93 @@ package plugin
 
 import "time"
 
-// MetaOpt is used to apply optional metadata on a plugin
-type MetaOpt func(m *Meta)
+type router int
 
+const (
+	LRURouter router = iota
+	StickyRouter
+	ConfigBasedRouter
+)
+
+// MetaOpt is used to apply optional metadata on a plugin
+type MetaOpt func(m *meta)
+
+// ConcurrencyCount is the max number of concurrent calls the plugin
+// should take.  For example:
+// If there are 5 tasks using the plugin and its concurrency count is 2,
+// snapd will keep 3 plugin instances running.
 // ConcurrencyCount overwrites the default (5) for a Meta's ConcurrencyCount.
 func ConcurrencyCount(cc int) MetaOpt {
-	return func(m *Meta) {
+	return func(m *meta) {
 		m.ConcurrencyCount = cc
 	}
 }
 
+// Exclusive == true results in a single instance of the plugin running
+// regardless of the number of tasks using the plugin.
 // Exclusive overwrites the default (false) for a Meta's Exclusive key.
 func Exclusive(e bool) MetaOpt {
-	return func(m *Meta) {
+	return func(m *meta) {
 		m.Exclusive = e
 	}
 }
 
+// Unsecure results in unencrypted communication with this plugin.
 // Unsecure overwrites the default (false) for a Meta's Unsecure key.
 func Unsecure(e bool) MetaOpt {
-	return func(m *Meta) {
+	return func(m *meta) {
 		m.Unsecure = e
 	}
 }
 
+// RoutingStrategy will override the routing strategy this plugin requires.
+// The default routing strategy is Least Recently Used.
 // RoutingStrategy overwrites the default (LRU) for a Meta's RoutingStrategy.
-func RoutingStrategy(r RoutingStrategyType) MetaOpt {
-	return func(m *Meta) {
+func RoutingStrategy(r router) MetaOpt {
+	return func(m *meta) {
 		m.RoutingStrategy = r
 	}
 }
 
+// CacheTTL will override the default cache TTL for the this plugin. snapd
+// caches metrics on the daemon side for a default of 500ms.
 // CacheTTL overwrites the default (500ms) for a Meta's CacheTTL.
 func CacheTTL(t time.Duration) MetaOpt {
-	return func(m *Meta) {
+	return func(m *meta) {
 		m.CacheTTL = t
 	}
 }
 
+type pluginType int
+
+const (
+	collectorType pluginType = iota
+	processorType
+	publisherType
+)
+
 // meta is the metadata for a plugin
 type meta struct {
 	// A plugin's unique identifier is type:name:version.
-	Type    PluginType
+	Type    pluginType
 	Name    string
 	Version int
 
-	// ConcurrencyCount is the max number of concurrent calls the plugin
-	// should take.  For example:
-	// If there are 5 tasks using the plugin and its concurrency count is 2,
-	// snapd will keep 3 plugin instances running.
 	ConcurrencyCount int
-
-	// Exclusive == true results in a single instance of the plugin running
-	// regardless of the number of tasks using the plugin.
-	Exclusive bool
-
-	// Unsecure results in unencrypted communication with this plugin.
-	Unsecure bool
-
-	// CacheTTL will override the default cache TTL for the this plugin. snapd
-	// caches metrics on the daemon side for a default of 500ms.
-	CacheTTL time.Duration
-
-	// RoutingStrategy will override the routing strategy this plugin requires.
-	// The default routing strategy is Least Recently Used.
-	RoutingStrategy RoutingStrategyType
+	Exclusive        bool
+	Unsecure         bool
+	CacheTTL         time.Duration
+	RoutingStrategy  router
 }
 
-// newMeta sets defaults, applies options, and then returns a Meta struct
+// newMeta sets defaults, applies options, and then returns a meta struct
 func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta {
-	p := PluginMet{
+	p := meta{
 		Name:             name,
 		Version:          version,
-		Type:             pluginType,
+		Type:             plType,
 		ConcurrencyCount: 5,
+		RoutingStrategy:  LRURouter,
 	}
 	for _, opt := range opts {
 		opt(&p)

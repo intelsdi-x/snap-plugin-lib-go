@@ -22,7 +22,7 @@ package plugin
 import (
 	"golang.org/x/net/context"
 
-	"github.com/intelsdi-x/snap-plugin-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
 )
 
 // TODO(danielscottt): plugin panics
@@ -33,28 +33,12 @@ type collectorProxy struct {
 	plugin Collector
 }
 
-func (c *collectorProxy) collectMetrics(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
-	metrics, err := g.plugin.CollectMetrics(arg.Metrics)
-	if err != nil {
-		return &rpc.CollectMetricsReply{
-			Error: err.Error(),
-		}, nil
-	}
-	reply := &rpc.CollectMetricsReply{
-		Metrics: metrics,
-	}
+func (c *collectorProxy) CollectMetrics(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
+	reply := &rpc.MetricsReply{}
 	return reply, nil
 }
 
-func (cp *collectorProxy) getMetricTypes(ctx context.Context, arg *rpc.GetMetricTypesArg) (*rpc.MetricsReply, error) {
-	metricTypes, err := g.Plugin.GetMetricTypes(cfgmap)
-	if err != nil {
-		return &rpc.GetMetricTypesReply{
-			Error: err.Error(),
-		}, nil
-	}
-	reply := &rpc.GetMetricTypesReply{
-		Metrics: metricTypes,
-	}
+func (cp *collectorProxy) GetMetricTypes(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
+	reply := &rpc.MetricsReply{}
 	return reply, nil
 }

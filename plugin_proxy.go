@@ -22,7 +22,7 @@ package plugin
 import (
 	"golang.org/x/net/context"
 
-	"github.com/intelsdi-x/snap-plugin-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
 )
 
 // TODO(danielscottt): heartbeats
@@ -30,6 +30,15 @@ import (
 // TODO(danielscottt): plugin panics
 
 type pluginProxy struct {
+	plugin Plugin
+	halt   chan struct{}
+}
+
+func newPluginProxy(plugin Plugin) *pluginProxy {
+	return &pluginProxy{
+		plugin: plugin,
+		halt:   make(chan struct{}),
+	}
 }
 
 func (*pluginProxy) Ping(ctx context.Context, arg *rpc.Empty) (*rpc.ErrReply, error) {
@@ -41,15 +50,5 @@ func (*pluginProxy) Kill(ctx context.Context, arg *rpc.KillArg) (*rpc.ErrReply, 
 }
 
 func (p *pluginProxy) GetConfigPolicy(ctx context.Context, arg *rpc.Empty) (*rpc.GetConfigPolicyReply, error) {
-	policy, err := p.plugin.GetConfigPolicy()
-	if err != nil {
-		return &rpc.GetConfigPolicyReply{
-			Error: err.Error(),
-		}, nil
-	}
-	reply, err := rpc.NewGetConfigPolicyReply(policy)
-	if err != nil {
-		return nil, err
-	}
-	return reply, nil
+	return &rpc.GetConfigPolicyReply{}, nil
 }

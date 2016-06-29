@@ -17,22 +17,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package plugin
+package main
 
 import (
-	"golang.org/x/net/context"
+	"github.com/intelsdi-x/snap-plugin-lib-go"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/examples/rand/rand"
 )
 
-//TODO(danielscottt): plugin panics
+const (
+	pluginName    = "rando"
+	pluginVersion = 1
+)
 
-type publisherProxy struct {
-	pluginProxy
-
-	plugin Publisher
-}
-
-func (p *publisherProxy) Publish(ctx context.Context, arg *rpc.MetricsArg) (*rpc.ErrReply, error) {
-	return &rpc.ErrReply{}, nil
+func main() {
+	plugin.StartCollector(rand.RandCollector{}, pluginName, pluginVersion)
 }
