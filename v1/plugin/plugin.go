@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"google.golang.org/grpc"
-
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
@@ -47,7 +46,7 @@ type Collector interface {
 type Processor interface {
 	Plugin
 
-	Process([]Metric) ([]Metric, error)
+	Process([]Metric, Config) ([]Metric, error)
 }
 
 // Publisher is a sink in the Snap pipeline.  It publishes data into another
@@ -55,7 +54,7 @@ type Processor interface {
 type Publisher interface {
 	Plugin
 
-	Publisher([]Metric) ([]Metric, error)
+	Publish([]Metric, Config) error
 }
 
 // StartCollector is given a Collector implementation and its metadata,
@@ -70,7 +69,7 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterCollectorServer(server, proxy)
-	return startPlugin(server, m, proxy.pluginProxy.halt)
+	return startPlugin(server, m, &proxy.pluginProxy)
 }
 
 // StartProcessor is given a Processor implementation and its metadata,
@@ -85,7 +84,7 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterProcessorServer(server, proxy)
-	return startPlugin(server, m, proxy.pluginProxy.halt)
+	return startPlugin(server, m, &proxy.pluginProxy)
 }
 
 // StartPublisher is given a Publisher implementation and its metadata,
@@ -100,16 +99,26 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterPublisherServer(server, proxy)
-	return startPlugin(server, m, proxy.pluginProxy.halt)
+	return startPlugin(server, m, &proxy.pluginProxy)
 }
 
 type server interface {
 	Serve(net.Listener) error
 }
 
-func startPlugin(srv server, m meta, halt <-chan struct{}) int {
-	//TODO(danielscottt): listen port
-	l, err := net.Listen("tcp", "127.0.0.1:9998")
+type preamble struct {
+	Meta          meta
+	ListenAddress string
+	Type          pluginType
+	State         int
+	ErrorMessage  string
+}
+
+func startPlugin(srv server, m meta, p *pluginProxy) int {
+	l, _ := net.Listen("tcp", ":0")
+	l.Close()
+	addr := fmt.Sprintf("127.0.0.1:%v", l.Addr().(*net.TCPAddr).Port)
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		// TODO(danielscottt): logging
 		panic(err)
@@ -117,18 +126,22 @@ func startPlugin(srv server, m meta, halt <-chan struct{}) int {
 	go func() {
 		err := srv.Serve(l)
 		if err != nil {
-			panic(err) //TODO(danielscottt): panic?
+			panic(err)
 		}
 	}()
-	// TODO(danielscottt): Resp generation
-	// Output response to stdout
-	metaJson, err := json.Marshal(m)
+	resp := preamble{
+		Meta:          m,
+		ListenAddress: addr,
+		Type:          m.Type,
+		State:         0, // Hardcode success since panics on err
+	}
+	preambleJSON, err := json.Marshal(resp)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(metaJson))
-	// TODO(danielscottt): heartbeats
+	fmt.Println(string(preambleJSON))
+	go p.HeartbeatWatch()
 	// TODO(danielscottt): exit code
-	<-halt
+	<-p.halt
 	return 0
 }

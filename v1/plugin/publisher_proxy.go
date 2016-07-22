@@ -22,7 +22,7 @@ package plugin
 import (
 	"golang.org/x/net/context"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
 //TODO(danielscottt): plugin panics
@@ -33,6 +33,17 @@ type publisherProxy struct {
 	plugin Publisher
 }
 
-func (p *publisherProxy) Publish(ctx context.Context, arg *rpc.MetricsArg) (*rpc.ErrReply, error) {
-	return &rpc.ErrReply{}, nil
+func (p *publisherProxy) Publish(ctx context.Context, arg *rpc.PubProcArg) (*rpc.ErrReply, error) {
+	metrics := []Metric{}
+	for _, mt := range arg.Metrics {
+		metric := fromProtoMetric(mt)
+		metrics = append(metrics, metric)
+	}
+	cfg := fromProtoConfig(arg.Config)
+	err := p.plugin.Publish(metrics, cfg)
+	if err != nil {
+		return &rpc.ErrReply{}, err
+	} else {
+		return &rpc.ErrReply{}, nil
+	}
 }

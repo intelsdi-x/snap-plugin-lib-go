@@ -22,7 +22,7 @@ package plugin
 import (
 	"golang.org/x/net/context"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
 // TODO(danielscottt): plugin panics
@@ -34,11 +34,37 @@ type collectorProxy struct {
 }
 
 func (c *collectorProxy) CollectMetrics(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
-	reply := &rpc.MetricsReply{}
+	metrics := []Metric{}
+	for _, mt := range arg.Metrics {
+		metric := fromProtoMetric(mt)
+		metrics = append(metrics, metric)
+	}
+	r, err := c.plugin.CollectMetrics(metrics)
+	if err != nil {
+		return nil, err
+	}
+	mts := []*rpc.Metric{}
+	for _, mt := range r {
+		metric := toProtoMetric(mt)
+		mts = append(mts, metric)
+	}
+	reply := &rpc.MetricsReply{Metrics: mts}
 	return reply, nil
 }
 
-func (cp *collectorProxy) GetMetricTypes(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
-	reply := &rpc.MetricsReply{}
+func (c *collectorProxy) GetMetricTypes(ctx context.Context, arg *rpc.GetMetricTypesArg) (*rpc.MetricsReply, error) {
+	cfg := fromProtoConfig(arg.Config)
+	r, err := c.plugin.GetMetricTypes(cfg)
+	if err != nil {
+		return nil, err
+	}
+	metrics := []*rpc.Metric{}
+	for _, mt := range r {
+		metric := toProtoMetric(mt)
+		metrics = append(metrics, metric)
+	}
+	reply := &rpc.MetricsReply{
+		Metrics: metrics,
+	}
 	return reply, nil
 }
