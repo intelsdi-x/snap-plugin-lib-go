@@ -89,9 +89,11 @@ const (
 // meta is the metadata for a plugin
 type meta struct {
 	// A plugin's unique identifier is type:name:version.
-	Type    pluginType
-	Name    string
-	Version int
+	Type       pluginType
+	Name       string
+	Version    int
+	RPCType    int
+	RPCVersion int
 
 	ConcurrencyCount int
 	Exclusive        bool
@@ -108,6 +110,8 @@ func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta 
 		Type:             plType,
 		ConcurrencyCount: 5,
 		RoutingStrategy:  LRURouter,
+		RPCType:          2, // GRPC type
+		RPCVersion:       1, // This is v1 lib
 	}
 	for _, opt := range opts {
 		opt(&p)
