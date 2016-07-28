@@ -22,7 +22,7 @@ package plugin
 import (
 	"golang.org/x/net/context"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/rpc"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
 //TODO(danielscottt): plugin panics
@@ -33,7 +33,23 @@ type processorProxy struct {
 	plugin Processor
 }
 
-func (p *processorProxy) Process(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
-	reply := &rpc.MetricsReply{}
+func (p *processorProxy) Process(ctx context.Context, arg *rpc.PubProcArg) (*rpc.MetricsReply, error) {
+	metrics := []Metric{}
+	for _, mt := range arg.Metrics {
+		metric := fromProtoMetric(mt)
+		metrics = append(metrics, metric)
+	}
+	cfg := fromProtoConfig(arg.Config)
+	r, err := p.plugin.Process(metrics, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	mts := []*rpc.Metric{}
+	for _, mt := range r {
+		metric := toProtoMetric(mt)
+		mts = append(mts, metric)
+	}
+	reply := &rpc.MetricsReply{Metrics: mts}
 	return reply, nil
 }
