@@ -2,7 +2,7 @@
 
 This is a library for writing plugins for the [snap](https://github.com/intelsdi-x/snap) telemetry framework. The goal for this library is to make it super simple to write a plugin.
 
-# Steps to writing a plugin
+# Writing a plugin
 
 In order to write a plugin for snap, it is necessary to define some methods to satisfy the appropriate interfaces. The interface is slightly different depending on what type (collector, processor, or publisher) of plugin is being written. The interfaces are:
 
