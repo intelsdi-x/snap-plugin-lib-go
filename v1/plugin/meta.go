@@ -29,6 +29,8 @@ const (
 	ConfigBasedRouter
 )
 
+const defaultConcurrencyCount = 5
+
 // MetaOpt is used to apply optional metadata on a plugin
 type MetaOpt func(m *meta)
 
@@ -49,14 +51,6 @@ func ConcurrencyCount(cc int) MetaOpt {
 func Exclusive(e bool) MetaOpt {
 	return func(m *meta) {
 		m.Exclusive = e
-	}
-}
-
-// Unsecure results in unencrypted communication with this plugin.
-// Unsecure overwrites the default (false) for a Meta's Unsecure key.
-func Unsecure(e bool) MetaOpt {
-	return func(m *meta) {
-		m.Unsecure = e
 	}
 }
 
@@ -108,13 +102,18 @@ func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta 
 		Name:             name,
 		Version:          version,
 		Type:             plType,
-		ConcurrencyCount: 5,
+		ConcurrencyCount: defaultConcurrencyCount,
 		RoutingStrategy:  LRURouter,
 		RPCType:          2, // GRPC type
 		RPCVersion:       1, // This is v1 lib
+		// Unsecure is a legacy value not used for grpc, but needed to avoid
+		// calling SetKey needlessly.
+		Unsecure: true,
 	}
+
 	for _, opt := range opts {
 		opt(&p)
 	}
+
 	return p
 }
