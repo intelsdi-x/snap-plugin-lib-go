@@ -115,7 +115,10 @@ type preamble struct {
 }
 
 func startPlugin(srv server, m meta, p *pluginProxy) int {
-	l, _ := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		panic("Unable to get open port")
+	}
 	l.Close()
 	addr := fmt.Sprintf("127.0.0.1:%v", l.Addr().(*net.TCPAddr).Port)
 	l, err := net.Listen("tcp", addr)
