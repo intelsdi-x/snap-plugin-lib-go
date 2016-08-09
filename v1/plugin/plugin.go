@@ -121,13 +121,13 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 	}
 	l.Close()
 	addr := fmt.Sprintf("127.0.0.1:%v", l.Addr().(*net.TCPAddr).Port)
-	l, err := net.Listen("tcp", addr)
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		// TODO(danielscottt): logging
 		panic(err)
 	}
 	go func() {
-		err := srv.Serve(l)
+		err := srv.Serve(lis)
 		if err != nil {
 			panic(err)
 		}
