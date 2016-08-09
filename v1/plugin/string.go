@@ -21,35 +21,35 @@ package plugin
 
 import "fmt"
 
-// StringRule defines a type to contain String specific rule data.
-type StringRule struct {
+// stringRule defines a type to contain String specific rule data.
+type stringRule struct {
 	Key        string
 	Default    string
 	HasDefault bool
 	Required   bool
 }
 
-type stringRuleOpt func(*StringRule)
+type stringRuleOpt func(*stringRule)
 
-// SetDefaultString Allows easy setting of the Default value for an StringRule.
+// SetDefaultString Allows easy setting of the Default value for an stringRule.
 // Usage:
 //		NewStringRule(key, req, config.SetDefaultString(default))
 func SetDefaultString(in string) stringRuleOpt {
-	return func(i *StringRule) {
+	return func(i *stringRule) {
 		i.Default = in
 		i.HasDefault = true
 	}
 }
 
-// NewStringRule returns a new StringRule with the specified args.
+// NewStringRule returns a new stringRule with the specified args.
 // The required arguments are key(string), req(bool)
 // and optionally:
 //		config.SetDefaultString(string)
-func NewStringRule(key string, req bool, opts ...stringRuleOpt) (StringRule, error) {
+func NewStringRule(key string, req bool, opts ...stringRuleOpt) (stringRule, error) {
 	if key == "" {
-		return StringRule{}, fmt.Errorf(errEmptyKey)
+		return stringRule{}, fmt.Errorf(errEmptyKey)
 	}
-	rule := StringRule{
+	rule := stringRule{
 		Key:      key,
 		Required: req,
 	}

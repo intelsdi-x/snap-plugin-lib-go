@@ -21,35 +21,35 @@ package plugin
 
 import "fmt"
 
-// BoolRule defines a type to contain Bool specific rule data.
-type BoolRule struct {
+// boolRule defines a type to contain Bool specific rule data.
+type boolRule struct {
 	Key        string
 	Default    bool
 	HasDefault bool
 	Required   bool
 }
 
-type boolRuleOpt func(*BoolRule)
+type boolRuleOpt func(*boolRule)
 
-// SetDefaultBool Allows easy setting of the Default value for an BoolRule.
+// SetDefaultBool Allows easy setting of the Default value for an boolRule.
 // Usage:
 //		NewBoolRule(key, req, config.SetDefaultBool(default))
 func SetDefaultBool(in bool) boolRuleOpt {
-	return func(i *BoolRule) {
+	return func(i *boolRule) {
 		i.Default = in
 		i.HasDefault = true
 	}
 }
 
-// NewBoolRule returns a new BoolRule with the specified args.
+// NewBoolRule returns a new boolRule with the specified args.
 // The required arguments are key(string), req(bool)
 // and optionally:
 //		config.SetDefaultBool(bool)
-func NewBoolRule(key string, req bool, opts ...boolRuleOpt) (BoolRule, error) {
+func NewBoolRule(key string, req bool, opts ...boolRuleOpt) (boolRule, error) {
 	if key == "" {
-		return BoolRule{}, fmt.Errorf(errEmptyKey)
+		return boolRule{}, fmt.Errorf(errEmptyKey)
 	}
-	rule := BoolRule{
+	rule := boolRule{
 		Key:      key,
 		Required: req,
 	}

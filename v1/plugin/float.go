@@ -21,8 +21,8 @@ package plugin
 
 import "fmt"
 
-// FloatRule defines a type to contain Float specific rule data.
-type FloatRule struct {
+// floatRule defines a type to contain Float specific rule data.
+type floatRule struct {
 	Key string
 
 	Default    float64
@@ -37,49 +37,49 @@ type FloatRule struct {
 	HasMax  bool
 }
 
-type floatRuleOpt func(*FloatRule)
+type floatRuleOpt func(*floatRule)
 
-// SetDefaultFloat Allows easy setting of the Default value for an FloatRule.
+// SetDefaultFloat Allows easy setting of the Default value for an floatRule.
 // Usage:
 //		NewFloatRule(key, req, config.SetDefaultFloat(default))
 func SetDefaultFloat(in float64) floatRuleOpt {
-	return func(i *FloatRule) {
+	return func(i *floatRule) {
 		i.Default = in
 		i.HasDefault = true
 	}
 }
 
-// SetMaxFloat Allows easy setting of the Max value for an FloatRule.
+// SetMaxFloat Allows easy setting of the Max value for an floatRule.
 // Usage:
 //		NewFloatRule(key, req, config.SetMaxFloat(max))
 func SetMaxFloat(max float64) floatRuleOpt {
-	return func(i *FloatRule) {
+	return func(i *floatRule) {
 		i.Maximum = max
 		i.HasMax = true
 	}
 }
 
-// SetMinFloat Allows easy setting of the Min value for an FloatRule.
+// SetMinFloat Allows easy setting of the Min value for an floatRule.
 // Usage:
 //		NewFloatRule(key, req, config.SetMinFloat(min))
 func SetMinFloat(min float64) floatRuleOpt {
-	return func(i *FloatRule) {
+	return func(i *floatRule) {
 		i.Minimum = min
 		i.HasMin = true
 	}
 }
 
-// NewFloatRule returns a new FloatRule with the specified args.
+// NewFloatRule returns a new floatRule with the specified args.
 // The required arguments are key(string), req(bool)
 // and optionally:
 //		config.SetDefaultFloat(float64),
 //		config.SetMinFloat(float64),
 //		config.SetMaxFloat(float64),
-func NewFloatRule(key string, req bool, opts ...floatRuleOpt) (FloatRule, error) {
+func NewFloatRule(key string, req bool, opts ...floatRuleOpt) (floatRule, error) {
 	if key == "" {
-		return FloatRule{}, fmt.Errorf(errEmptyKey)
+		return floatRule{}, fmt.Errorf(errEmptyKey)
 	}
-	rule := FloatRule{
+	rule := floatRule{
 		Key:      key,
 		Required: req,
 	}

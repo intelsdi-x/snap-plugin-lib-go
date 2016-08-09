@@ -26,45 +26,45 @@ import (
 )
 
 type ConfigPolicy struct {
-	IntegerRules map[string]IntegerRule
-	BoolRules    map[string]BoolRule
-	StringRules  map[string]StringRule
-	FloatRules   map[string]FloatRule
+	IntegerRules map[string]integerRule
+	BoolRules    map[string]boolRule
+	StringRules  map[string]stringRule
+	FloatRules   map[string]floatRule
 }
 
 func NewConfigPolicy() *ConfigPolicy {
 	return &ConfigPolicy{
-		IntegerRules: map[string]IntegerRule{},
-		BoolRules:    map[string]BoolRule{},
-		StringRules:  map[string]StringRule{},
-		FloatRules:   map[string]FloatRule{},
+		IntegerRules: map[string]integerRule{},
+		BoolRules:    map[string]boolRule{},
+		StringRules:  map[string]stringRule{},
+		FloatRules:   map[string]floatRule{},
 	}
 }
 
-// AddIntRule adds a given IntegerRule to the IntegerRules map.
+// AddIntRule adds a given integerRule to the IntegerRules map.
 // This will overwrite any existing entry.
-func (c *ConfigPolicy) AddIntRule(key []string, in IntegerRule) {
+func (c *ConfigPolicy) AddIntRule(key []string, in integerRule) {
 	k := strings.Join(key, ".") // Method used on daemon side in ctree
 	c.IntegerRules[k] = in
 }
 
-// AddBoolRule adds a given BoolRule to the BoolRules map.
+// AddBoolRule adds a given boolRule to the BoolRules map.
 // This will overwrite any existing entry.
-func (c *ConfigPolicy) AddBoolRule(key []string, in BoolRule) {
+func (c *ConfigPolicy) AddBoolRule(key []string, in boolRule) {
 	k := strings.Join(key, ".") // Method used in daemon/ctree
 	c.BoolRules[k] = in
 }
 
-// AddFloatRule adds a given FloatRule to the FloatRules map.
+// AddFloatRule adds a given floatRule to the FloatRules map.
 // This will overwrite any existing entry.
-func (c *ConfigPolicy) AddFloatRule(key []string, in FloatRule) {
+func (c *ConfigPolicy) AddFloatRule(key []string, in floatRule) {
 	k := strings.Join(key, ".") // Method used in daemon/ctree
 	c.FloatRules[k] = in
 }
 
-// AddStringRule adds a given StringRule to the StringRules map.
+// AddStringRule adds a given stringRule to the StringRules map.
 // This will overwrite any existing entry.
-func (c *ConfigPolicy) AddStringRule(key []string, in StringRule) {
+func (c *ConfigPolicy) AddStringRule(key []string, in stringRule) {
 	k := strings.Join(key, ".") // Method used in daemon/ctree
 	c.StringRules[k] = in
 }

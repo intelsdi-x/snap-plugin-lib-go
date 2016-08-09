@@ -21,8 +21,8 @@ package plugin
 
 import "fmt"
 
-// IntegerRule defines a type to contain Integer specific rule data.
-type IntegerRule struct {
+// integerRule defines a type to contain Integer specific rule data.
+type integerRule struct {
 	Key string
 
 	Default    int64
@@ -37,49 +37,49 @@ type IntegerRule struct {
 	HasMax  bool
 }
 
-type integerRuleOpt func(*IntegerRule)
+type integerRuleOpt func(*integerRule)
 
-// SetDefaultInt Allows easy setting of the Default value for an IntegerRule.
+// SetDefaultInt Allows easy setting of the Default value for an integerRule.
 // Usage:
 //	//	NewIntegerRule(key, req, config.SetDefaultInt(default))
 func SetDefaultInt(in int64) integerRuleOpt {
-	return func(i *IntegerRule) {
+	return func(i *integerRule) {
 		i.Default = in
 		i.HasDefault = true
 	}
 }
 
-// SetMaxInt Allows easy setting of the Max value for an IntegerRule.
+// SetMaxInt Allows easy setting of the Max value for an integerRule.
 // Usage:
 //		NewIntegerRule(key, req, config.SetMaxInt(max))
 func SetMaxInt(max int64) integerRuleOpt {
-	return func(i *IntegerRule) {
+	return func(i *integerRule) {
 		i.Maximum = max
 		i.HasMax = true
 	}
 }
 
-// SetMinInt Allows easy setting of the Min value for an IntegerRule.
+// SetMinInt Allows easy setting of the Min value for an integerRule.
 // Usage:
 //		NewIntegerRule(key, req, config.SetMinInt(min))
 func SetMinInt(min int64) integerRuleOpt {
-	return func(i *IntegerRule) {
+	return func(i *integerRule) {
 		i.Minimum = min
 		i.HasMin = true
 	}
 }
 
-// NewIntegerRule returns a new IntegerRule with the specified args.
+// NewIntegerRule returns a new integerRule with the specified args.
 // The required arguments are key(string), req(bool)
 // and optionally:
 //		config.SetDefaultInt(int64),
 //		config.SetMinInt(int64),
 //		config.SetMaxInt(int64),
-func NewIntegerRule(key string, req bool, opts ...integerRuleOpt) (IntegerRule, error) {
+func NewIntegerRule(key string, req bool, opts ...integerRuleOpt) (integerRule, error) {
 	if key == "" {
-		return IntegerRule{}, fmt.Errorf(errEmptyKey)
+		return integerRule{}, fmt.Errorf(errEmptyKey)
 	}
-	rule := IntegerRule{
+	rule := integerRule{
 		Key:      key,
 		Required: req,
 	}
