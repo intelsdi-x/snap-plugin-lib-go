@@ -1,0 +1,25 @@
+sudo: false
+language: go
+go:
+- 1.6.3
+- 1.7
+before_install:
+- go get github.com/Masterminds/glide
+- if [ ! -d $SNAP_PLUGIN_LIB_GO_SOURCE ]; then mkdir -p $HOME/gopath/src/github.com/intelsdi-x; ln -s $TRAVIS_BUILD_DIR $SNAP_PLUGIN_LIB_GO_SOURCE; fi # CI for forks not from intelsdi-x
+env:
+  global:
+  - SNAP_PLUGIN_LIB_GO_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-lib-go
+  matrix:
+  - TEST_TYPE=small
+  - TEST_TYPE=medium
+install:
+  - export TMPDIR=$HOME/tmp
+  - mkdir -p $TMPDIR
+  - cd $SNAP_PLUGIN_LIB_GO_SOURCE 
+  - glide install
+script:
+  - go test -tags=$TEST_TYPE $(glide novendor) -v
+notifications:
+  email: false
+  slack:
+    secure: VkbZLIc2RH8yf3PtIAxUNPdAu3rQQ7yQx0GcK124JhbEnZGaHyK615V0rbG7HcVmYKGPdB0cXqZiLBDKGqGKb2zR1NepOe1nF03jxGSpPq8jIFeEXSJGEYGL34ScDzZZGuG6qwbjFcXiW5lqn6t8igzp7v2+URYBaZo5ktCS2xY=
