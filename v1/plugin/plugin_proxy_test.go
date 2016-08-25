@@ -22,6 +22,7 @@ limitations under the License.
 package plugin
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -41,14 +42,19 @@ func TestPluginProxy(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(p.LastPing.Sub(last), ShouldBeGreaterThan, 0)
 		})
-		Convey("Succeed while killing", func() {
-			var err error
-			go func() {
-				_, err = p.Kill(context.Background(), &rpc.KillArg{Reason: "test killing"})
-			}()
-			<-p.halt
-			So(err, ShouldBeNil)
-		})
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			Convey("Succeed while killing", t, func() {
+				defer wg.Done()
+				_, err := p.Kill(context.Background(), &rpc.KillArg{Reason: "test killing"})
+				So(err, ShouldBeNil)
+			})
+		}()
+		<-p.halt
+		wg.Wait()
+
 		Convey("Succeed while getting config policy", func() {
 			_, err := p.GetConfigPolicy(context.Background(), &rpc.Empty{})
 			So(err, ShouldBeNil)

@@ -20,12 +20,12 @@ limitations under the License.
 package main
 
 import (
-	"github.com/intelsdi-x/snap-plugin-lib-go/examples/rand/rand"
+	"github.com/intelsdi-x/snap-plugin-lib-go/examples/collector/rand"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
 const (
-	pluginName    = "rando"
+	pluginName    = "test-rand-collector"
 	pluginVersion = 1
 )
 
