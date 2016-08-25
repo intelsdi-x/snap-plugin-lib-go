@@ -62,6 +62,7 @@ type RandCollector struct {
 
 // CollectMetrics collects metrics for testing
 func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
+	metrics := []plugin.Metric{}
 	for idx, mt := range mts {
 		mts[idx].Timestamp = time.Now()
 		if val, err := mt.Config.GetBool("testbool"); err == nil && val {
@@ -73,23 +74,26 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 			} else {
 				mts[idx].Data = rand.Int31()
 			}
+			metrics = append(metrics, mts[idx])
 		} else if mt.Namespace[len(mt.Namespace)-1].Value == "float" {
 			if val, err := mt.Config.GetFloat("testfloat"); err == nil {
 				mts[idx].Data = val
 			} else {
 				mts[idx].Data = rand.Float64()
 			}
+			metrics = append(metrics, mts[idx])
 		} else if mt.Namespace[len(mt.Namespace)-1].Value == "string" {
 			if val, err := mt.Config.GetString("teststring"); err == nil {
 				mts[idx].Data = val
 			} else {
 				mts[idx].Data = strs[rand.Intn(len(strs)-1)]
 			}
+			metrics = append(metrics, mts[idx])
 		} else {
 			return nil, fmt.Errorf("Invalid metric: %v", mt.Namespace.String())
 		}
 	}
-	return mts, nil
+	return metrics, nil
 }
 
 //GetMetricTypes returns metric types for testing
