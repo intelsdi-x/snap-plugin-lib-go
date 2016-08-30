@@ -42,6 +42,16 @@ type Metric struct {
 }
 
 func toProtoMetric(mt Metric) *rpc.Metric {
+	if mt.Timestamp == (time.Time{}) {
+		//Timestamp is unitialized, set to time.Now()
+		mt.Timestamp = time.Now()
+	}
+
+	if mt.lastAdvertisedTime == (time.Time{}) {
+		// lastAdvertisedTime is unitialized, set to time.Now()
+		mt.lastAdvertisedTime = time.Now()
+	}
+
 	metric := &rpc.Metric{
 		Namespace:   toProtoNamespace(mt.Namespace),
 		Version:     mt.Version,
