@@ -47,7 +47,10 @@ func (p *processorProxy) Process(ctx context.Context, arg *rpc.PubProcArg) (*rpc
 
 	mts := []*rpc.Metric{}
 	for _, mt := range r {
-		metric := toProtoMetric(mt)
+		metric, err := toProtoMetric(mt)
+		if err != nil {
+			return nil, err
+		}
 		mts = append(mts, metric)
 	}
 	reply := &rpc.MetricsReply{Metrics: mts}

@@ -45,7 +45,10 @@ func (c *collectorProxy) CollectMetrics(ctx context.Context, arg *rpc.MetricsArg
 	}
 	mts := []*rpc.Metric{}
 	for _, mt := range r {
-		metric := toProtoMetric(mt)
+		metric, err := toProtoMetric(mt)
+		if err != nil {
+			return nil, err
+		}
 		mts = append(mts, metric)
 	}
 	reply := &rpc.MetricsReply{Metrics: mts}
@@ -60,7 +63,9 @@ func (c *collectorProxy) GetMetricTypes(ctx context.Context, arg *rpc.GetMetricT
 	}
 	metrics := []*rpc.Metric{}
 	for _, mt := range r {
-		metric := toProtoMetric(mt)
+		// We can ignore this error since we are not returning data from
+		// GetMetricTypes.
+		metric, _ := toProtoMetric(mt)
 		metrics = append(metrics, metric)
 	}
 	reply := &rpc.MetricsReply{
