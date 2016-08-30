@@ -92,12 +92,13 @@ func toProtoMetric(mt Metric) *rpc.Metric {
 
 func fromProtoMetric(mt *rpc.Metric) Metric {
 	metric := Metric{
-		Namespace: fromProtoNamespace(mt.Namespace),
-		Version:   mt.Version,
-		Tags:      mt.Tags,
-		Unit:      mt.Unit,
-		Config:    Config{},
-		Timestamp: time.Unix(mt.Timestamp.Sec, mt.Timestamp.Nsec),
+		Namespace:   fromProtoNamespace(mt.Namespace),
+		Version:     mt.Version,
+		Tags:        mt.Tags,
+		Unit:        mt.Unit,
+		Description: mt.Description,
+		Config:      Config{},
+		Timestamp:   time.Unix(mt.Timestamp.Sec, mt.Timestamp.Nsec),
 		lastAdvertisedTime: time.Unix(mt.LastAdvertisedTime.Sec,
 			mt.LastAdvertisedTime.Nsec),
 	}
