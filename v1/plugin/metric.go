@@ -41,7 +41,10 @@ type Metric struct {
 	lastAdvertisedTime time.Time
 }
 
-func toProtoMetric(mt Metric) *rpc.Metric {
+// Converts a metric to an protobuf metric.
+// Returns an error in the case where the metric.Data is not one of the
+// supported types.
+func toProtoMetric(mt Metric) (*rpc.Metric, error) {
 	if mt.Timestamp == (time.Time{}) {
 		//Timestamp is unitialized, set to time.Now()
 		mt.Timestamp = time.Now()
@@ -51,7 +54,6 @@ func toProtoMetric(mt Metric) *rpc.Metric {
 		// lastAdvertisedTime is unitialized, set to time.Now()
 		mt.lastAdvertisedTime = time.Now()
 	}
-
 	metric := &rpc.Metric{
 		Namespace:   toProtoNamespace(mt.Namespace),
 		Version:     mt.Version,
@@ -82,12 +84,14 @@ func toProtoMetric(mt Metric) *rpc.Metric {
 		metric.Data = &rpc.Metric_Int64Data{t}
 	case []byte:
 		metric.Data = &rpc.Metric_BytesData{t}
+	case bool:
+		metric.Data = &rpc.Metric_BoolData{t}
 	case nil:
 		metric.Data = nil
 	default:
-		panic(fmt.Sprintf("unsupported type: %s", t))
+		return nil, fmt.Errorf("unsupported type: %s given in metric data", t)
 	}
-	return metric
+	return metric, nil
 }
 
 func fromProtoMetric(mt *rpc.Metric) Metric {
@@ -117,6 +121,8 @@ func fromProtoMetric(mt *rpc.Metric) Metric {
 		metric.Data = mt.GetInt64Data()
 	case *rpc.Metric_Int32Data:
 		metric.Data = mt.GetInt32Data()
+	case *rpc.Metric_BoolData:
+		metric.Data = mt.GetBoolData()
 	}
 
 	return metric
