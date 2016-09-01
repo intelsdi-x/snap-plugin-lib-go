@@ -66,26 +66,26 @@ func toProtoMetric(mt Metric) (*rpc.Metric, error) {
 		},
 		LastAdvertisedTime: &rpc.Time{
 			Sec:  mt.lastAdvertisedTime.Unix(),
-			Nsec: int64(mt.Timestamp.Nanosecond()),
+			Nsec: int64(mt.lastAdvertisedTime.Nanosecond()),
 		},
 	}
 	switch t := mt.Data.(type) {
 	case string:
-		metric.Data = &rpc.Metric_StringData{t}
+		metric.Data = &rpc.Metric_StringData{StringData: t}
 	case float64:
-		metric.Data = &rpc.Metric_Float64Data{t}
+		metric.Data = &rpc.Metric_Float64Data{Float64Data: t}
 	case float32:
-		metric.Data = &rpc.Metric_Float32Data{t}
+		metric.Data = &rpc.Metric_Float32Data{Float32Data: t}
 	case int32:
-		metric.Data = &rpc.Metric_Int32Data{t}
+		metric.Data = &rpc.Metric_Int32Data{Int32Data: t}
 	case int:
-		metric.Data = &rpc.Metric_Int64Data{int64(t)}
+		metric.Data = &rpc.Metric_Int64Data{Int64Data: int64(t)}
 	case int64:
-		metric.Data = &rpc.Metric_Int64Data{t}
+		metric.Data = &rpc.Metric_Int64Data{Int64Data: t}
 	case []byte:
-		metric.Data = &rpc.Metric_BytesData{t}
+		metric.Data = &rpc.Metric_BytesData{BytesData: t}
 	case bool:
-		metric.Data = &rpc.Metric_BoolData{t}
+		metric.Data = &rpc.Metric_BoolData{BoolData: t}
 	case nil:
 		metric.Data = nil
 	default:
