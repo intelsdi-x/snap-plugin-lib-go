@@ -35,6 +35,7 @@ type collectorProxy struct {
 
 func (c *collectorProxy) CollectMetrics(ctx context.Context, arg *rpc.MetricsArg) (*rpc.MetricsReply, error) {
 	metrics := []Metric{}
+
 	for _, mt := range arg.Metrics {
 		metric := fromProtoMetric(mt)
 		metrics = append(metrics, metric)
@@ -57,6 +58,7 @@ func (c *collectorProxy) CollectMetrics(ctx context.Context, arg *rpc.MetricsArg
 
 func (c *collectorProxy) GetMetricTypes(ctx context.Context, arg *rpc.GetMetricTypesArg) (*rpc.MetricsReply, error) {
 	cfg := fromProtoConfig(arg.Config)
+
 	r, err := c.plugin.GetMetricTypes(cfg)
 	if err != nil {
 		return nil, err
