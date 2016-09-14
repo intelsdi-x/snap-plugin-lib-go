@@ -236,6 +236,12 @@ func NewNamespace(ns ...string) namespace {
 	}
 	return n
 }
+// CopyNamespace copies array of namespace elements to new array
+func CopyNamespace(src namespace) namespace {
+	dst := make([]namespaceElement, len(src))
+	copy(dst, src)
+	return dst
+}
 
 // AddDynamicElement adds a dynamic element to the given namespace.  A dynamic
 // namespaceElement is defined by having a nonempty Name field.
