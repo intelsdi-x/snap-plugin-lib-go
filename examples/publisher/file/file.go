@@ -31,7 +31,13 @@ import (
 type FPublisher struct {
 }
 
-// GetConfigPolicy returns plugin mandatory fields as the config policy
+/*
+	GetConfigPolicy() returns the configPolicy for your plugin.
+
+	A config policy is how users can provide configuration info to
+	plugin. Here you define what sorts of config info your plugin
+	needs and/or requires.
+*/
 func (f FPublisher) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
 	return *policy, nil
