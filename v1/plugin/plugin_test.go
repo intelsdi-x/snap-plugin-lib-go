@@ -67,17 +67,17 @@ func (mp *mockPlugin) GetConfigPolicy() (ConfigPolicy, error) {
 	}
 	cp := NewConfigPolicy()
 
-	cp.AddBoolRule([]string{"log"}, boolRule{Key: "logLevel", Required: true, Default: true, HasDefault: true})
-	cp.AddBoolRule([]string{"cache"}, boolRule{Key: "cacheTime", Required: true, Default: false, HasDefault: true})
+	cp.AddNewBoolRule([]string{"log"}, "logLevel", true, SetDefaultBool(true))
+	cp.AddNewBoolRule([]string{"cache"}, "cacheTime", true, SetDefaultBool(false))
 
-	cp.AddFloatRule([]string{"float"}, floatRule{Key: "low", Required: true, Default: 32.1, HasDefault: true})
-	cp.AddFloatRule([]string{"cache"}, floatRule{Key: "high", Required: true, Default: 2399.58, HasDefault: true})
+	cp.AddNewFloatRule([]string{"float"}, "low", true, SetDefaultFloat(32.1))
+	cp.AddNewFloatRule([]string{"cache"}, "high", true, SetDefaultFloat(2399.58))
 
-	cp.AddIntRule([]string{"xyz"}, integerRule{Key: "logLevel", Required: false, Default: 30, HasDefault: true})
-	cp.AddIntRule([]string{"abc"}, integerRule{Key: "cacheTime", Required: true, Default: 50, HasDefault: true})
+	cp.AddNewIntRule([]string{"xyz"}, "logLevel", false, SetDefaultInt(30))
+	cp.AddNewIntRule([]string{"abc"}, "cacheTime", true, SetDefaultInt(50))
 
-	cp.AddStringRule([]string{"log"}, stringRule{Key: "logLevel", Required: true, Default: "123", HasDefault: true})
-	cp.AddStringRule([]string{"cache"}, stringRule{Key: "cacheTime", Required: true, Default: "tyty", HasDefault: true})
+	cp.AddNewStringRule([]string{"log"}, "logLevel", true, SetDefaultString("123"))
+	cp.AddNewStringRule([]string{"cache"}, "cacheTime", true, SetDefaultString("tyty"))
 
 	return (*cp), nil
 }

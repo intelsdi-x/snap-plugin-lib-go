@@ -58,10 +58,9 @@ func (r RProcessor) Process(mts []plugin.Metric, cfg plugin.Config) ([]plugin.Me
 func (r RProcessor) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
 
-	br, _ := plugin.NewBoolRule(
+	policy.AddNewBoolRule([]string{"random"},
 		"testbool",
 		false)
-	policy.AddBoolRule([]string{"random"}, br)
 
 	return *policy, nil
 }

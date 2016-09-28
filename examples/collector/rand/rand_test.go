@@ -96,22 +96,10 @@ func TestRandCollector(t *testing.T) {
 
 	Convey("Test GetConfigPolicy", t, func() {
 		rc := RandCollector{}
-		cp, err := rc.GetConfigPolicy()
+		_, err := rc.GetConfigPolicy()
 
 		Convey("No error returned", func() {
 			So(err, ShouldBeNil)
-		})
-
-		Convey("Has interger rule", func() {
-			So(len(cp.IntegerRules), ShouldBeGreaterThan, 0)
-		})
-
-		Convey("Has float rule", func() {
-			So(len(cp.FloatRules), ShouldBeGreaterThan, 0)
-		})
-
-		Convey("Has bool rule", func() {
-			So(len(cp.BoolRules), ShouldBeGreaterThan, 0)
 		})
 	})
 }

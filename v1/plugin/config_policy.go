@@ -20,122 +20,129 @@ limitations under the License.
 package plugin
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
 type ConfigPolicy struct {
-	IntegerRules map[string]integerRule
-	BoolRules    map[string]boolRule
-	StringRules  map[string]stringRule
-	FloatRules   map[string]floatRule
+	boolRules    map[string]*rpc.BoolPolicy
+	floatRules   map[string]*rpc.FloatPolicy
+	integerRules map[string]*rpc.IntegerPolicy
+	stringRules  map[string]*rpc.StringPolicy
 }
 
 func NewConfigPolicy() *ConfigPolicy {
 	return &ConfigPolicy{
-		IntegerRules: map[string]integerRule{},
-		BoolRules:    map[string]boolRule{},
-		StringRules:  map[string]stringRule{},
-		FloatRules:   map[string]floatRule{},
+		boolRules:    map[string]*rpc.BoolPolicy{},
+		floatRules:   map[string]*rpc.FloatPolicy{},
+		integerRules: map[string]*rpc.IntegerPolicy{},
+		stringRules:  map[string]*rpc.StringPolicy{},
 	}
 }
 
-// AddIntRule adds a given integerRule to the IntegerRules map.
-// This will overwrite any existing entry.
-func (c *ConfigPolicy) AddIntRule(key []string, in integerRule) {
-	k := strings.Join(key, ".") // Method used on daemon side in ctree
-	c.IntegerRules[k] = in
+// AddNewIntegerRule adds a new integerRule with the specified args to the integerRules map.
+// The required arguments are ns([]string), key(string), req(bool)
+// and optionally:
+//		plugin.SetDefaultInt(int64),
+//		plugin.SetMinInt(int64),
+//		plugin.SetMaxInt(int64),
+func (c *ConfigPolicy) AddNewIntRule(ns []string, key string, req bool, opts ...integerRuleOpt) error {
+	if key == "" {
+		return fmt.Errorf(errEmptyKey)
+	}
+	rule := rpc.IntegerRule{
+		Required: req,
+	}
+
+	for _, opt := range opts {
+		opt(&rule)
+	}
+	k := strings.Join(ns, ".")
+	if c.integerRules[k] == nil {
+		c.integerRules[k] = &rpc.IntegerPolicy{Rules: map[string]*rpc.IntegerRule{}}
+	}
+	c.integerRules[k].Rules[key] = &rule
+	return nil
 }
 
-// AddBoolRule adds a given boolRule to the BoolRules map.
-// This will overwrite any existing entry.
-func (c *ConfigPolicy) AddBoolRule(key []string, in boolRule) {
-	k := strings.Join(key, ".") // Method used in daemon/ctree
-	c.BoolRules[k] = in
+// AddNewBoolRule adds a new boolRule with the specified args to the boolRules map.
+// The required arguments are ns([]string), key(string), req(bool)
+// and optionally:
+//		plugin.SetDefaultBool(bool)
+func (c *ConfigPolicy) AddNewBoolRule(ns []string, key string, req bool, opts ...boolRuleOpt) error {
+	if key == "" {
+		return fmt.Errorf(errEmptyKey)
+	}
+	rule := &rpc.BoolRule{
+		Required: req,
+	}
+
+	for _, opt := range opts {
+		opt(rule)
+	}
+	k := strings.Join(ns, ".") // Method used in daemon/ctree
+	if c.boolRules[k] == nil {
+		c.boolRules[k] = &rpc.BoolPolicy{Rules: map[string]*rpc.BoolRule{}}
+	}
+	c.boolRules[k].Rules[key] = rule
+	return nil
 }
 
-// AddFloatRule adds a given floatRule to the FloatRules map.
-// This will overwrite any existing entry.
-func (c *ConfigPolicy) AddFloatRule(key []string, in floatRule) {
-	k := strings.Join(key, ".") // Method used in daemon/ctree
-	c.FloatRules[k] = in
+// AddNewFloatRule adds a new floatRule with the specified args to the floatRules map.
+// The required arguments are ns([]string), key(string), req(bool)
+// and optionally:
+//		plugin.SetDefaultFloat(float64),
+//		plugin.SetMinFloat(float64),
+//		plugin.SetMaxFloat(float64),
+func (c *ConfigPolicy) AddNewFloatRule(ns []string, key string, req bool, opts ...floatRuleOpt) error {
+	if key == "" {
+		return fmt.Errorf(errEmptyKey)
+	}
+	rule := &rpc.FloatRule{
+		Required: req,
+	}
+
+	for _, opt := range opts {
+		opt(rule)
+	}
+	k := strings.Join(ns, ".")
+	if c.floatRules[k] == nil {
+		c.floatRules[k] = &rpc.FloatPolicy{Rules: map[string]*rpc.FloatRule{}}
+	}
+	c.floatRules[k].Rules[key] = rule
+	return nil
 }
 
-// AddStringRule adds a given stringRule to the StringRules map.
-// This will overwrite any existing entry.
-func (c *ConfigPolicy) AddStringRule(key []string, in stringRule) {
-	k := strings.Join(key, ".") // Method used in daemon/ctree
-	c.StringRules[k] = in
+// AddNewStringRule adds a new stringRule with the specified args to the stringRules map.
+// The required arguments are ns([]string), key(string), req(bool)
+// and optionally:
+//		plugin.SetDefaultString(string)
+func (c *ConfigPolicy) AddNewStringRule(ns []string, key string, req bool, opts ...stringRuleOpt) error {
+	if key == "" {
+		return fmt.Errorf(errEmptyKey)
+	}
+	rule := &rpc.StringRule{
+		Required: req,
+	}
+
+	for _, opt := range opts {
+		opt(rule)
+	}
+	k := strings.Join(ns, ".") // Method used in daemon/ctree
+	if c.stringRules[k] == nil {
+		c.stringRules[k] = &rpc.StringPolicy{Rules: map[string]*rpc.StringRule{}}
+	}
+	c.stringRules[k].Rules[key] = rule
+	return nil
 }
 
 func newGetConfigPolicyReply(cfg ConfigPolicy) *rpc.GetConfigPolicyReply {
-	ret := &rpc.GetConfigPolicyReply{
-		BoolPolicy:    map[string]*rpc.BoolPolicy{},
-		FloatPolicy:   map[string]*rpc.FloatPolicy{},
-		IntegerPolicy: map[string]*rpc.IntegerPolicy{},
-		StringPolicy:  map[string]*rpc.StringPolicy{},
+	return &rpc.GetConfigPolicyReply{
+		BoolPolicy:    cfg.boolRules,
+		FloatPolicy:   cfg.floatRules,
+		IntegerPolicy: cfg.integerRules,
+		StringPolicy:  cfg.stringRules,
 	}
-
-	for k, v := range cfg.IntegerRules {
-		r := &rpc.IntegerRule{
-			Required:   v.Required,
-			Default:    v.Default,
-			HasDefault: v.HasDefault,
-			Minimum:    v.Minimum,
-			HasMin:     v.HasMin,
-			Maximum:    v.Maximum,
-			HasMax:     v.HasMax,
-		}
-
-		if ret.IntegerPolicy[k] == nil {
-			ret.IntegerPolicy[k] = &rpc.IntegerPolicy{Rules: map[string]*rpc.IntegerRule{}}
-		}
-		ret.IntegerPolicy[k].Rules[v.Key] = r
-	}
-
-	for k, v := range cfg.FloatRules {
-		r := &rpc.FloatRule{
-			Required:   v.Required,
-			Default:    v.Default,
-			HasDefault: v.HasDefault,
-			Minimum:    v.Minimum,
-			HasMin:     v.HasMin,
-			Maximum:    v.Maximum,
-			HasMax:     v.HasMax,
-		}
-
-		if ret.FloatPolicy[k] == nil {
-			ret.FloatPolicy[k] = &rpc.FloatPolicy{Rules: map[string]*rpc.FloatRule{}}
-		}
-		ret.FloatPolicy[k].Rules[v.Key] = r
-	}
-
-	for k, v := range cfg.StringRules {
-		r := &rpc.StringRule{
-			Required:   v.Required,
-			Default:    v.Default,
-			HasDefault: v.HasDefault,
-		}
-
-		if ret.StringPolicy[k] == nil {
-			ret.StringPolicy[k] = &rpc.StringPolicy{Rules: map[string]*rpc.StringRule{}}
-		}
-		ret.StringPolicy[k].Rules[v.Key] = r
-	}
-
-	for k, v := range cfg.BoolRules {
-		r := &rpc.BoolRule{
-			Required:   v.Required,
-			Default:    v.Default,
-			HasDefault: v.HasDefault,
-		}
-
-		if ret.BoolPolicy[k] == nil {
-			ret.BoolPolicy[k] = &rpc.BoolPolicy{Rules: map[string]*rpc.BoolRule{}}
-		}
-		ret.BoolPolicy[k].Rules[v.Key] = r
-	}
-
-	return ret
 }

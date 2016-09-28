@@ -22,8 +22,6 @@ limitations under the License.
 package plugin
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -34,63 +32,84 @@ func TestConfigPolicy(t *testing.T) {
 	tc := configPolicyTestCases()
 	Convey("Test Config Policy", t, func() {
 		for _, c := range tc {
-			Convey(fmt.Sprintf("Test Config Policy %+v", strings.Join(c.input.key, "/")), func() {
-				switch c.input.rule.(type) {
-				case stringRule:
-					srule := c.input.rule.(stringRule)
-					p.AddStringRule(c.input.key, srule)
+			Convey("Test Config Policy "+c.input.key, func() {
+				exist := false
+				switch c.input.opts.(type) {
+				case stringRuleOpt:
+					sopts := c.input.opts.(stringRuleOpt)
+					p.AddNewStringRule(c.input.ns, c.input.key, c.input.req, sopts)
 					r := newGetConfigPolicyReply(*p).GetStringPolicy()
-					Convey("Test ConfigPolicy stringRule", func() {
+					Convey("Test ConfigPolicy stringRule "+c.input.key, func() {
 						for _, v := range r {
 							for kk, vv := range v.GetRules() {
-								So(kk, ShouldEqual, srule.Key)
-								So(vv.Required, ShouldEqual, srule.Required)
-								So(vv.HasDefault, ShouldEqual, srule.HasDefault)
-								So(vv.Default, ShouldEqual, srule.Default)
+								if kk == c.output.key {
+									exist = true
+									So(vv.Required, ShouldEqual, c.output.req)
+									So(vv.HasDefault, ShouldEqual, c.output.hasDefault)
+									if vv.HasDefault {
+										So(vv.Default, ShouldEqual, c.output.def.(string))
+									}
+								}
 							}
 						}
+						So(exist, ShouldEqual, true)
 					})
-				case boolRule:
-					brule := c.input.rule.(boolRule)
-					p.AddBoolRule(c.input.key, brule)
+				case boolRuleOpt:
+					bopts := c.input.opts.(boolRuleOpt)
+					p.AddNewBoolRule(c.input.ns, c.input.key, c.input.req, bopts)
 					r := newGetConfigPolicyReply(*p).GetBoolPolicy()
-					Convey("Test ConfigPolicy boolRule", func() {
+					Convey("Test ConfigPolicy boolRule "+c.input.key, func() {
 						for _, v := range r {
 							for kk, vv := range v.GetRules() {
-								So(kk, ShouldEqual, brule.Key)
-								So(vv.Required, ShouldEqual, brule.Required)
-								So(vv.HasDefault, ShouldEqual, brule.HasDefault)
-								So(vv.Default, ShouldEqual, brule.Default)
+								if kk == c.output.key {
+									exist = true
+									So(vv.Required, ShouldEqual, c.output.req)
+									So(vv.HasDefault, ShouldEqual, c.output.hasDefault)
+									if vv.HasDefault {
+										So(vv.Default, ShouldEqual, c.output.def.(bool))
+									}
+								}
 							}
 						}
+						So(exist, ShouldEqual, true)
 					})
-				case integerRule:
-					irule := c.input.rule.(integerRule)
-					p.AddIntRule(c.input.key, irule)
+				case integerRuleOpt:
+					iopts := c.input.opts.(integerRuleOpt)
+					p.AddNewIntRule(c.input.ns, c.input.key, c.input.req, iopts)
 					r := newGetConfigPolicyReply(*p)
-					Convey("Test ConfigPolicy integerRule", func() {
+					Convey("Test ConfigPolicy integerRule "+c.input.key, func() {
 						for _, v := range r.GetIntegerPolicy() {
 							for kk, vv := range v.GetRules() {
-								So(kk, ShouldEqual, irule.Key)
-								So(vv.Required, ShouldEqual, irule.Required)
-								So(vv.HasDefault, ShouldEqual, irule.HasDefault)
-								So(vv.Default, ShouldEqual, irule.Default)
+								if kk == c.output.key {
+									exist = true
+									So(vv.Required, ShouldEqual, c.output.req)
+									So(vv.HasDefault, ShouldEqual, c.output.hasDefault)
+									if vv.HasDefault {
+										So(vv.Default, ShouldEqual, c.output.def.(int64))
+									}
+								}
 							}
 						}
+						So(exist, ShouldEqual, true)
 					})
-				case floatRule:
-					frule := c.input.rule.(floatRule)
-					p.AddFloatRule(c.input.key, frule)
+				case floatRuleOpt:
+					fopts := c.input.opts.(floatRuleOpt)
+					p.AddNewFloatRule(c.input.ns, c.input.key, c.input.req, fopts)
 					r := newGetConfigPolicyReply(*p)
-					Convey("Test ConfigPolicy floatRule", func() {
+					Convey("Test ConfigPolicy floatRule "+c.input.key, func() {
 						for _, v := range r.GetFloatPolicy() {
 							for kk, vv := range v.GetRules() {
-								So(kk, ShouldEqual, frule.Key)
-								So(vv.Required, ShouldEqual, frule.Required)
-								So(vv.HasDefault, ShouldEqual, frule.HasDefault)
-								So(vv.Default, ShouldEqual, frule.Default)
+								if kk == c.output.key {
+									exist = true
+									So(vv.Required, ShouldEqual, c.output.req)
+									So(vv.HasDefault, ShouldEqual, c.output.hasDefault)
+									if vv.HasDefault {
+										So(vv.Default, ShouldEqual, c.output.def.(float64))
+									}
+								}
 							}
 						}
+						So(exist, ShouldEqual, true)
 					})
 				}
 			})
@@ -99,42 +118,115 @@ func TestConfigPolicy(t *testing.T) {
 }
 
 type inputConfigPolicy struct {
-	key  []string
-	rule interface{}
+	ns   []string
+	key  string
+	req  bool
+	opts interface{}
+}
+
+type expectedConfigPolicy struct {
+	ns         []string
+	key        string
+	req        bool
+	hasDefault bool
+	def        interface{}
 }
 
 type testCaseConfigPolicy struct {
-	input inputConfigPolicy
+	input  inputConfigPolicy
+	output expectedConfigPolicy
 }
 
 func configPolicyTestCases() []testCaseConfigPolicy {
 	tc := []testCaseConfigPolicy{
-		// test stringRule
+		// test stringRule with Default value
 		testCaseConfigPolicy{
 			input: inputConfigPolicy{
-				key:  []string{"a", "b", "c"},
-				rule: stringRule{Key: "xyz", Required: true, Default: "sss", HasDefault: true},
+				ns:   []string{"a", "b", "c"},
+				key:  "StringWithDefault",
+				req:  true,
+				opts: SetDefaultString("sss"),
+			},
+			output: expectedConfigPolicy{
+				ns:         []string{"a", "b", "c"},
+				key:        "StringWithDefault",
+				req:        true,
+				hasDefault: true,
+				def:        "sss",
 			},
 		},
-		// test boolRule
+		// test stringRule without Default value
 		testCaseConfigPolicy{
 			input: inputConfigPolicy{
-				key:  []string{"a1", "b1", "c1"},
-				rule: boolRule{Key: "xyz", Required: true, Default: true, HasDefault: true},
+				key: "StringWithoutDefault",
+				req: true,
+			},
+			output: expectedConfigPolicy{
+				key:        "StringWithoutDefault",
+				req:        true,
+				hasDefault: false,
+			},
+		},
+		// test boolRule required
+		testCaseConfigPolicy{
+			input: inputConfigPolicy{
+				ns:   []string{"a1", "b1", "c1"},
+				key:  "boolRequired",
+				req:  true,
+				opts: SetDefaultBool(true),
+			},
+			output: expectedConfigPolicy{
+				ns:         []string{"a1", "b1", "c1"},
+				key:        "boolRequired",
+				req:        true,
+				hasDefault: true,
+				def:        true,
+			},
+		},
+		// test boolRule not required
+		testCaseConfigPolicy{
+			input: inputConfigPolicy{
+				key:  "boolNotRequired",
+				req:  false,
+				opts: SetDefaultBool(true),
+			},
+			output: expectedConfigPolicy{
+				key:        "boolNotRequired",
+				req:        false,
+				hasDefault: true,
+				def:        true,
 			},
 		},
 		// test floatRule
 		testCaseConfigPolicy{
 			input: inputConfigPolicy{
-				key:  []string{"a2", "b2", "c2"},
-				rule: floatRule{Key: "xyz", Required: true, Default: 12.1, HasDefault: true},
+				ns:   []string{"a2", "b2", "c2"},
+				key:  "float",
+				req:  true,
+				opts: SetDefaultFloat(12.1),
+			},
+			output: expectedConfigPolicy{
+				ns:         []string{"a2", "b2", "c2"},
+				key:        "float",
+				req:        true,
+				hasDefault: true,
+				def:        12.1,
 			},
 		},
 		// test integerRule
 		testCaseConfigPolicy{
 			input: inputConfigPolicy{
-				key:  []string{"a3", "b3", "c3"},
-				rule: integerRule{Key: "xyz", Required: true, Default: 12, HasDefault: true},
+				ns:   []string{"a3", "b3", "c3"},
+				key:  "integer",
+				req:  true,
+				opts: SetDefaultInt(12),
+			},
+			output: expectedConfigPolicy{
+				ns:         []string{"a3", "b3", "c3"},
+				key:        "integer",
+				req:        true,
+				hasDefault: true,
+				def:        int64(12),
 			},
 		},
 	}
