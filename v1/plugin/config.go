@@ -19,12 +19,6 @@ limitations under the License.
 
 package plugin
 
-import "fmt"
-
-const (
-	errEmptyKey = "Key cannot be Empty"
-)
-
 // Config is a type alias for map[string]interface{} to allow the
 // helper functions Get{String,Bool,Float,Int} to be defined.
 type Config map[string]interface{}
@@ -40,10 +34,10 @@ func (c Config) GetString(key string) (string, error) {
 	)
 
 	if val, ok = c[key]; !ok {
-		return strout, fmt.Errorf("config item %s not found", key)
+		return strout, ErrConfigNotFound
 	}
 	if strout, ok = val.(string); !ok {
-		return strout, fmt.Errorf("config item %s is not a string", key)
+		return strout, ErrNotAString
 	}
 	return strout, nil
 }
@@ -59,11 +53,11 @@ func (c Config) GetBool(key string) (bool, error) {
 	)
 
 	if val, ok = c[key]; !ok {
-		return bout, fmt.Errorf("config item %s not found", key)
+		return bout, ErrConfigNotFound
 	}
 
 	if bout, ok = val.(bool); !ok {
-		return bout, fmt.Errorf("config item %s is not a bool", key)
+		return bout, ErrNotABool
 	}
 
 	return bout, nil
@@ -80,11 +74,11 @@ func (c Config) GetFloat(key string) (float64, error) {
 	)
 
 	if val, ok = c[key]; !ok {
-		return fout, fmt.Errorf("config item %s not found", key)
+		return fout, ErrConfigNotFound
 	}
 
 	if fout, ok = val.(float64); !ok {
-		return fout, fmt.Errorf("config item %s is not a float64", key)
+		return fout, ErrNotAFloat
 	}
 
 	return fout, nil
@@ -101,11 +95,11 @@ func (c Config) GetInt(key string) (int64, error) {
 	)
 
 	if val, ok = c[key]; !ok {
-		return iout, fmt.Errorf("config item %s not found", key)
+		return iout, ErrConfigNotFound
 	}
 
 	if iout, ok = val.(int64); !ok {
-		return iout, fmt.Errorf("config item %s is not a int64", key)
+		return iout, ErrNotAnInt
 	}
 
 	return iout, nil

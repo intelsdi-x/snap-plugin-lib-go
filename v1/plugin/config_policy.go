@@ -20,7 +20,6 @@ limitations under the License.
 package plugin
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
@@ -50,7 +49,7 @@ func NewConfigPolicy() *ConfigPolicy {
 //		plugin.SetMaxInt(int64),
 func (c *ConfigPolicy) AddNewIntRule(ns []string, key string, req bool, opts ...integerRuleOpt) error {
 	if key == "" {
-		return fmt.Errorf(errEmptyKey)
+		return ErrEmptyKey
 	}
 	rule := rpc.IntegerRule{
 		Required: req,
@@ -73,7 +72,7 @@ func (c *ConfigPolicy) AddNewIntRule(ns []string, key string, req bool, opts ...
 //		plugin.SetDefaultBool(bool)
 func (c *ConfigPolicy) AddNewBoolRule(ns []string, key string, req bool, opts ...boolRuleOpt) error {
 	if key == "" {
-		return fmt.Errorf(errEmptyKey)
+		return ErrEmptyKey
 	}
 	rule := &rpc.BoolRule{
 		Required: req,
@@ -98,7 +97,7 @@ func (c *ConfigPolicy) AddNewBoolRule(ns []string, key string, req bool, opts ..
 //		plugin.SetMaxFloat(float64),
 func (c *ConfigPolicy) AddNewFloatRule(ns []string, key string, req bool, opts ...floatRuleOpt) error {
 	if key == "" {
-		return fmt.Errorf(errEmptyKey)
+		return ErrEmptyKey
 	}
 	rule := &rpc.FloatRule{
 		Required: req,
@@ -121,7 +120,7 @@ func (c *ConfigPolicy) AddNewFloatRule(ns []string, key string, req bool, opts .
 //		plugin.SetDefaultString(string)
 func (c *ConfigPolicy) AddNewStringRule(ns []string, key string, req bool, opts ...stringRuleOpt) error {
 	if key == "" {
-		return fmt.Errorf(errEmptyKey)
+		return ErrEmptyKey
 	}
 	rule := &rpc.StringRule{
 		Required: req,
