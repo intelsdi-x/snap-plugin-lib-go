@@ -236,6 +236,7 @@ func NewNamespace(ns ...string) namespace {
 	}
 	return n
 }
+
 // CopyNamespace copies array of namespace elements to new array
 func CopyNamespace(src namespace) namespace {
 	dst := make([]namespaceElement, len(src))

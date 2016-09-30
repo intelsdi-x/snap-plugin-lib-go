@@ -46,7 +46,7 @@ func TestFilePublisher(t *testing.T) {
 				},
 			}
 			err := fp.Publish(metrics, plugin.Config{})
-			So(err.Error(), ShouldEqual, "config item file not found")
+			So(err, ShouldEqual, plugin.ErrConfigNotFound)
 		})
 		Convey("Publish with a config file", func() {
 			metrics := []plugin.Metric{
