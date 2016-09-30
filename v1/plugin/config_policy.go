@@ -61,7 +61,10 @@ func (c *ConfigPolicy) AddNewIntRule(ns []string, key string, req bool, opts ...
 	}
 	k := strings.Join(ns, ".")
 	if c.integerRules[k] == nil {
-		c.integerRules[k] = &rpc.IntegerPolicy{Rules: map[string]*rpc.IntegerRule{}}
+		c.integerRules[k] = &rpc.IntegerPolicy{
+			Rules: map[string]*rpc.IntegerRule{},
+			Key:   ns,
+		}
 	}
 	c.integerRules[k].Rules[key] = &rule
 	return nil
@@ -84,7 +87,10 @@ func (c *ConfigPolicy) AddNewBoolRule(ns []string, key string, req bool, opts ..
 	}
 	k := strings.Join(ns, ".") // Method used in daemon/ctree
 	if c.boolRules[k] == nil {
-		c.boolRules[k] = &rpc.BoolPolicy{Rules: map[string]*rpc.BoolRule{}}
+		c.boolRules[k] = &rpc.BoolPolicy{
+			Rules: map[string]*rpc.BoolRule{},
+			Key:   ns,
+		}
 	}
 	c.boolRules[k].Rules[key] = rule
 	return nil
@@ -109,7 +115,10 @@ func (c *ConfigPolicy) AddNewFloatRule(ns []string, key string, req bool, opts .
 	}
 	k := strings.Join(ns, ".")
 	if c.floatRules[k] == nil {
-		c.floatRules[k] = &rpc.FloatPolicy{Rules: map[string]*rpc.FloatRule{}}
+		c.floatRules[k] = &rpc.FloatPolicy{
+			Rules: map[string]*rpc.FloatRule{},
+			Key:   ns,
+		}
 	}
 	c.floatRules[k].Rules[key] = rule
 	return nil
@@ -132,7 +141,10 @@ func (c *ConfigPolicy) AddNewStringRule(ns []string, key string, req bool, opts 
 	}
 	k := strings.Join(ns, ".") // Method used in daemon/ctree
 	if c.stringRules[k] == nil {
-		c.stringRules[k] = &rpc.StringPolicy{Rules: map[string]*rpc.StringRule{}}
+		c.stringRules[k] = &rpc.StringPolicy{
+			Rules: map[string]*rpc.StringRule{},
+			Key:   ns,
+		}
 	}
 	c.stringRules[k].Rules[key] = rule
 	return nil
