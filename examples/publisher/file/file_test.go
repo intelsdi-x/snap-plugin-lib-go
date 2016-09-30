@@ -64,19 +64,11 @@ func TestFilePublisher(t *testing.T) {
 		})
 		Convey("Test GetConfigPolicy", func() {
 			fp := FPublisher{}
-			cp, err := fp.GetConfigPolicy()
+			_, err := fp.GetConfigPolicy()
 
 			Convey("No error returned", func() {
 				So(err, ShouldBeNil)
 			})
-
-			Convey("no rules", func() {
-				So(len(cp.BoolRules), ShouldEqual, 0)
-				So(len(cp.IntegerRules), ShouldEqual, 0)
-				So(len(cp.FloatRules), ShouldEqual, 0)
-				So(len(cp.StringRules), ShouldEqual, 0)
-			})
-
 		})
 	})
 }

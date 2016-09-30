@@ -141,14 +141,10 @@ func TestReverseProcessor(t *testing.T) {
 
 		Convey("Test GetConfigPolicy", func() {
 			rp := RProcessor{}
-			cp, err := rp.GetConfigPolicy()
+			_, err := rp.GetConfigPolicy()
 
 			Convey("No error returned", func() {
 				So(err, ShouldBeNil)
-			})
-
-			Convey("Has bool rule", func() {
-				So(len(cp.BoolRules), ShouldEqual, 1)
 			})
 
 		})
