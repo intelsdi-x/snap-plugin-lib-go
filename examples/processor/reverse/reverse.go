@@ -54,7 +54,13 @@ func (r RProcessor) Process(mts []plugin.Metric, cfg plugin.Config) ([]plugin.Me
 	return metrics, nil
 }
 
-// GetConfigPolicy testing config
+/*
+	GetConfigPolicy() returns the configPolicy for your plugin.
+
+	A config policy is how users can provide configuration info to
+	plugin. Here you define what sorts of config info your plugin
+	needs and/or requires.
+*/
 func (r RProcessor) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
 
