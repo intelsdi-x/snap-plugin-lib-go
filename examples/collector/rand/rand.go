@@ -62,10 +62,10 @@ type RandCollector struct {
 
 /*  CollectMetrics collects metrics for testing.
 
-	CollectMetrics() will be called by Snap when a task that collects one of the metrics returned from this plugins
-	GetMetricTypes() is started. The input will include a slice of all the metric types being collected.
+CollectMetrics() will be called by Snap when a task that collects one of the metrics returned from this plugins
+GetMetricTypes() is started. The input will include a slice of all the metric types being collected.
 
-	The output is the collected metrics as plugin.Metric and an error.
+The output is the collected metrics as plugin.Metric and an error.
 */
 func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 	metrics := []plugin.Metric{}
@@ -96,7 +96,7 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 			}
 			metrics = append(metrics, mts[idx])
 		} else {
-			return nil, fmt.Errorf("Invalid metric: %v", mt.Namespace.String())
+			return nil, fmt.Errorf("Invalid metric: %v", mt.Namespace.Strings())
 		}
 	}
 	return metrics, nil

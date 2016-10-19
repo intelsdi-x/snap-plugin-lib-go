@@ -46,7 +46,7 @@ func TestGetMetricTypes(t *testing.T) {
 			for _, m := range r.GetMetrics() {
 				tm := fromProtoMetric(m)
 				idx := fmt.Sprintf("%s.%d", tm.Namespace, tm.Version)
-				So(tm.Namespace.String(), ShouldEqual, metricMap[idx].Namespace.String())
+				So(tm.Namespace.Strings(), ShouldResemble, metricMap[idx].Namespace.Strings())
 				So(tm.Tags, ShouldEqual, metricMap[idx].Tags)
 			}
 		})
@@ -92,7 +92,15 @@ func TestCollectMetrics(t *testing.T) {
 			for _, v := range reply.GetMetrics() {
 				m := fromProtoMetric(v)
 				So(v.Tags, ShouldEqual, m.Tags)
-				So("/"+v.Namespace[0].Value, ShouldEqual, m.Namespace.String())
+
+				var nsArr []string
+				ns := v.GetNamespace()
+				for i := range ns {
+					nsArr = append(nsArr, ns[i].Value)
+				}
+				Convey(fmt.Sprintf("colleting namespace: %v", m.Namespace.Strings()), func() {
+					So(nsArr, ShouldResemble, m.Namespace.Strings())
+				})
 			}
 		})
 	})

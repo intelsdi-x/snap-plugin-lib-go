@@ -55,7 +55,7 @@ func (f FPublisher) Publish(mts []plugin.Metric, cfg plugin.Config) error {
 
 	for _, m := range mts {
 		fmt.Fprintf(writer, "%s|%v|%d|%s|%s|%s|%v|%v\n",
-			m.Namespace.String(),
+			m.Namespace.Strings(),
 			m.Data,
 			m.Version,
 			m.Unit,
