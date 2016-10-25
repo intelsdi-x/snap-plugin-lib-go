@@ -37,11 +37,9 @@ func TestMetric(t *testing.T) {
 
 	Convey("Test Metrics", t, func() {
 		for _, c := range tc {
-			Convey(fmt.Sprintf("Test Metrics %+v", c.input.Namespace.String()), func() {
+			Convey(fmt.Sprintf("Test Metrics %+v", c.input.Namespace.Strings()), func() {
 				ns := c.input.Namespace
-				nsStr := ns.String()
 				nsArr := ns.Strings()
-				So(strings.TrimLeft(nsStr, "/"), ShouldEqual, strings.Join(nsArr, "/"))
 				So(ns.Key(), ShouldEqual, strings.Join(nsArr, "."))
 
 				for i, n := range ns {
@@ -73,7 +71,7 @@ func TestToFromProtoNamespace(t *testing.T) {
 
 	Convey("Test ToFromProtoNamespace", t, func() {
 		for _, ns := range nss {
-			Convey(fmt.Sprintf("Test ToFromProtoNamespace %+v", ns.String()), func() {
+			Convey(fmt.Sprintf("Test ToFromProtoNamespace %+v", ns.Strings()), func() {
 				protoNs := toProtoNamespace(ns)
 				fromProtoNs := fromProtoNamespace(protoNs)
 				So(fromProtoNs, ShouldResemble, ns)
@@ -87,7 +85,7 @@ func TestToFromProtoMetric(t *testing.T) {
 
 	Convey("Test ToFromProtoMetric", t, func() {
 		for _, c := range tc {
-			Convey(fmt.Sprintf("Test ToFromProtoMetric %+v", c.input.Namespace.String()), func() {
+			Convey(fmt.Sprintf("Test ToFromProtoMetric %+v", c.input.Namespace.Strings()), func() {
 				protoMetric, err := toProtoMetric(c.input)
 				So(err, ShouldBeNil)
 
@@ -144,7 +142,7 @@ func TestMetricTime(t *testing.T) {
 
 	Convey("Test metric has no default time", t, func() {
 		for _, c := range tc {
-			Convey(fmt.Sprintf("Test metric has no default time %+v", c.input.Namespace.String()), func() {
+			Convey(fmt.Sprintf("Test metric has no default time %+v", c.input.Namespace.Strings()), func() {
 				protoMetric, err := toProtoMetric(c.input)
 				So(err, ShouldBeNil)
 
@@ -158,7 +156,7 @@ func TestMetricTime(t *testing.T) {
 
 	Convey("Test metric has time set", t, func() {
 		for _, c := range tc {
-			Convey(fmt.Sprintf("Test metric has time set %+v", c.input.Namespace.String()), func() {
+			Convey(fmt.Sprintf("Test metric has time set %+v", c.input.Namespace.Strings()), func() {
 				protoMetric, err := toProtoMetric(c.input)
 				So(err, ShouldBeNil)
 

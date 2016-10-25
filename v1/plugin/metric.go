@@ -186,13 +186,6 @@ func fromProtoNamespace(ns []*rpc.NamespaceElement) namespace {
 
 type namespace []namespaceElement
 
-// String returns the string representation of the namespace with "/" joining
-// the elements of the namespace.  A leading "/" is added.
-func (n namespace) String() string {
-	ns := n.Strings()
-	return "/" + strings.Join(ns, "/")
-}
-
 // Strings returns an array of strings that represent the elements of the
 // namespace.
 func (n namespace) Strings() []string {
