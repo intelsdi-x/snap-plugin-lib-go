@@ -61,6 +61,7 @@ type Publisher interface {
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt) int {
+	getArgs()
 	m := newMeta(collectorType, name, version, opts...)
 	server := grpc.NewServer()
 	// TODO(danielscottt) SSL
@@ -76,6 +77,7 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt) int {
+	getArgs()
 	m := newMeta(processorType, name, version, opts...)
 	server := grpc.NewServer()
 	// TODO(danielscottt) SSL
@@ -91,6 +93,7 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt) int {
+	getArgs()
 	m := newMeta(publisherType, name, version, opts...)
 	server := grpc.NewServer()
 	// TODO(danielscottt) SSL
@@ -109,17 +112,19 @@ type server interface {
 type preamble struct {
 	Meta          meta
 	ListenAddress string
+	PprofAddress  string
 	Type          pluginType
 	State         int
 	ErrorMessage  string
 }
 
 func startPlugin(srv server, m meta, p *pluginProxy) int {
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", ":"+listenPort)
 	if err != nil {
 		panic("Unable to get open port")
 	}
 	l.Close()
+
 	addr := fmt.Sprintf("127.0.0.1:%v", l.Addr().(*net.TCPAddr).Port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -136,6 +141,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		Meta:          m,
 		ListenAddress: addr,
 		Type:          m.Type,
+		PprofAddress:  pprofPort,
 		State:         0, // Hardcode success since panics on err
 	}
 	preambleJSON, err := json.Marshal(resp)
