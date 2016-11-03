@@ -21,7 +21,6 @@ package plugin
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
@@ -194,12 +193,6 @@ func (n namespace) Strings() []string {
 		ns = append(ns, namespaceElement.Value)
 	}
 	return ns
-}
-
-// Key returns a string representation of the namespace with "." joining
-// the elements of the namespace.
-func (n namespace) Key() string {
-	return strings.Join(n.Strings(), ".")
 }
 
 // IsDynamic returns true if there is any element of the namespace which is

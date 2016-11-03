@@ -24,7 +24,6 @@ package plugin
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -39,8 +38,6 @@ func TestMetric(t *testing.T) {
 		for _, c := range tc {
 			Convey(fmt.Sprintf("Test Metrics %+v", c.input.Namespace.Strings()), func() {
 				ns := c.input.Namespace
-				nsArr := ns.Strings()
-				So(ns.Key(), ShouldEqual, strings.Join(nsArr, "."))
 
 				for i, n := range ns {
 					elem := ns.Element(i)
