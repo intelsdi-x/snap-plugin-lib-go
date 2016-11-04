@@ -28,7 +28,7 @@ import (
 
 // Metric contains all info related to a Snap Metric
 type Metric struct {
-	Namespace   namespace
+	Namespace   Namespace
 	Version     int64
 	Config      Config
 	Data        interface{}
@@ -157,7 +157,7 @@ func fromProtoConfig(config *rpc.ConfigMap) Config {
 	return cfg
 }
 
-func toProtoNamespace(ns namespace) []*rpc.NamespaceElement {
+func toProtoNamespace(ns Namespace) []*rpc.NamespaceElement {
 	Elements := make([]*rpc.NamespaceElement, 0)
 	for _, ele := range ns {
 		Element := &rpc.NamespaceElement{
@@ -170,10 +170,10 @@ func toProtoNamespace(ns namespace) []*rpc.NamespaceElement {
 	return Elements
 }
 
-func fromProtoNamespace(ns []*rpc.NamespaceElement) namespace {
-	var nse namespace
+func fromProtoNamespace(ns []*rpc.NamespaceElement) Namespace {
+	var nse Namespace
 	for _, ele := range ns {
-		element := namespaceElement{
+		element := NamespaceElement{
 			Value:       ele.Value,
 			Description: ele.Description,
 			Name:        ele.Name,
@@ -183,11 +183,11 @@ func fromProtoNamespace(ns []*rpc.NamespaceElement) namespace {
 	return nse
 }
 
-type namespace []namespaceElement
+type Namespace []NamespaceElement
 
 // Strings returns an array of strings that represent the elements of the
 // namespace.
-func (n namespace) Strings() []string {
+func (n Namespace) Strings() []string {
 	var ns []string
 	for _, namespaceElement := range n {
 		ns = append(ns, namespaceElement.Value)
@@ -200,7 +200,7 @@ func (n namespace) Strings() []string {
 // an array of namespace elements (indexes) where there are dynamic namespace
 // elements. A dynamic component of the namespace are those elements that
 // contain variable data.
-func (n namespace) IsDynamic() (bool, []int) {
+func (n Namespace) IsDynamic() (bool, []int) {
 	var idx []int
 	ret := false
 	for i := range n {
@@ -215,54 +215,54 @@ func (n namespace) IsDynamic() (bool, []int) {
 // Newnamespace takes an array of strings and returns a namespace.  A namespace
 // is an array of namespaceElements.  The provided array of strings is used to
 // set the corresponding Value fields in the array of namespaceElements.
-func NewNamespace(ns ...string) namespace {
-	n := make([]namespaceElement, len(ns))
+func NewNamespace(ns ...string) Namespace {
+	n := make([]NamespaceElement, len(ns))
 	for i, ns := range ns {
-		n[i] = namespaceElement{Value: ns}
+		n[i] = NamespaceElement{Value: ns}
 	}
 	return n
 }
 
 // CopyNamespace copies array of namespace elements to new array
-func CopyNamespace(src namespace) namespace {
-	dst := make([]namespaceElement, len(src))
+func CopyNamespace(src Namespace) Namespace {
+	dst := make([]NamespaceElement, len(src))
 	copy(dst, src)
 	return dst
 }
 
-// AddDynamicElement adds a dynamic element to the given namespace.  A dynamic
+// AddDynamicElement adds a dynamic element to the given Namespace.  A dynamic
 // namespaceElement is defined by having a nonempty Name field.
-func (n namespace) AddDynamicElement(name, description string) namespace {
-	nse := namespaceElement{Name: name, Description: description, Value: "*"}
+func (n Namespace) AddDynamicElement(name, description string) Namespace {
+	nse := NamespaceElement{Name: name, Description: description, Value: "*"}
 	return append(n, nse)
 }
 
-// AddStaticElement adds a static element to the given namespace.  A static
+// AddStaticElement adds a static element to the given Namespace.  A static
 // namespaceElement is defined by having an empty Name field.
-func (n namespace) AddStaticElement(value string) namespace {
-	nse := namespaceElement{Value: value}
+func (n Namespace) AddStaticElement(value string) Namespace {
+	nse := NamespaceElement{Value: value}
 	return append(n, nse)
 }
 
-// AddStaticElements adds a static elements to the given namespace.  A static
+// AddStaticElements adds a static elements to the given Namespace.  A static
 // namespaceElement is defined by having an empty Name field.
-func (n namespace) AddStaticElements(values ...string) namespace {
+func (n Namespace) AddStaticElements(values ...string) Namespace {
 	for _, value := range values {
-		n = append(n, namespaceElement{Value: value})
+		n = append(n, NamespaceElement{Value: value})
 	}
 	return n
 }
 
-func (n namespace) Element(idx int) namespaceElement {
+func (n Namespace) Element(idx int) NamespaceElement {
 	if idx >= 0 && idx < len(n) {
 		return n[idx]
 	}
-	return namespaceElement{}
+	return NamespaceElement{}
 }
 
 // namespaceElement provides meta data related to the namespace.
 // This is of particular importance when the namespace contains data.
-type namespaceElement struct {
+type NamespaceElement struct {
 	Value       string
 	Description string
 	Name        string
@@ -270,16 +270,16 @@ type namespaceElement struct {
 
 // NewNamespaceElement tasks a string and returns a namespaceElement where the
 // Value field is set to the provided string argument.
-func NewNamespaceElement(e string) namespaceElement {
+func NewNamespaceElement(e string) NamespaceElement {
 	if e != "" {
-		return namespaceElement{Value: e}
+		return NamespaceElement{Value: e}
 	}
-	return namespaceElement{}
+	return NamespaceElement{}
 }
 
 // IsDynamic returns true if the namespace element contains data.  A namespace
 // element that has a nonempty Name field is considered dynamic.
-func (n *namespaceElement) IsDynamic() bool {
+func (n *NamespaceElement) IsDynamic() bool {
 	if n.Name != "" {
 		return true
 	}
