@@ -377,19 +377,19 @@ func metricConfigTestCases() []testCaseMetricConfig {
 	return tc
 }
 
-func metricNamespaceTestCases() []namespace {
-	nss := []namespace{
-		namespace{
-			namespaceElement{Value: "a"},
-			namespaceElement{Value: "b"},
-			namespaceElement{Value: "c"},
+func metricNamespaceTestCases() []Namespace {
+	nss := []Namespace{
+		Namespace{
+			NamespaceElement{Value: "a"},
+			NamespaceElement{Value: "b"},
+			NamespaceElement{Value: "c"},
 		},
-		namespace{
-			namespaceElement{Value: "a"},
-			namespaceElement{Name: "rst", Value: "*", Description: "range"},
-			namespaceElement{Value: "c"},
-			namespaceElement{Name: "party", Value: "*", Description: "lol"},
-			namespaceElement{Value: "d"},
+		Namespace{
+			NamespaceElement{Value: "a"},
+			NamespaceElement{Name: "rst", Value: "*", Description: "range"},
+			NamespaceElement{Value: "c"},
+			NamespaceElement{Name: "party", Value: "*", Description: "lol"},
+			NamespaceElement{Value: "d"},
 		},
 	}
 	return nss
