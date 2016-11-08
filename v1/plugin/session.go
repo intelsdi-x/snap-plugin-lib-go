@@ -65,11 +65,15 @@ func getArgs() error {
 
 func getPort() error {
 	router := httprouter.New()
-	router.GET("/v1/debug/pprof/", index)
-	router.GET("/v1/debug/pprof/cmdline", cmdline)
-	router.GET("/v1/debug/pprof/profile", profile)
-	router.GET("/v1/debug/pprof/symbol", symbol)
-	router.GET("/v1/debug/pprof/trace", trace)
+	router.GET("/debug/pprof/", index)
+	router.GET("/debug/pprof/block", index)
+	router.GET("/debug/pprof/goroutine", index)
+	router.GET("/debug/pprof/heap", index)
+	router.GET("/debug/pprof/threadcreate", index)
+	router.GET("/debug/pprof/cmdline", cmdline)
+	router.GET("/debug/pprof/profile", profile)
+	router.GET("/debug/pprof/symbol", symbol)
+	router.GET("/debug/pprof/trace", trace)
 	addr, err := net.ResolveTCPAddr("tcp", ":0")
 	if err != nil {
 		return err
@@ -88,22 +92,22 @@ func getPort() error {
 	return nil
 }
 
-func index(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	pprof.Index(w, r)
 }
 
-func cmdline(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func cmdline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	pprof.Cmdline(w, r)
 }
 
-func profile(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func profile(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	pprof.Profile(w, r)
 }
 
-func symbol(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func symbol(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	pprof.Symbol(w, r)
 }
 
-func trace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func trace(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	pprof.Trace(w, r)
 }
