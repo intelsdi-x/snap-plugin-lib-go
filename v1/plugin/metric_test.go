@@ -281,6 +281,28 @@ func metricTestCases() []testCaseMetric {
 		},
 		testCaseMetric{
 			input: Metric{
+				Namespace:          NewNamespace("a11", "b11", "c11"),
+				Version:            10,
+				Timestamp:          time.Now(),
+				Data:               uint32(12345),
+				Tags:               map[string]string{"label": "uint32"},
+				Description:        "desc32",
+				lastAdvertisedTime: time.Now(),
+			},
+		},
+		testCaseMetric{
+			input: Metric{
+				Namespace:          NewNamespace("a12", "b12", "c12"),
+				Version:            11,
+				Timestamp:          time.Now(),
+				Data:               uint64(123456789),
+				Tags:               map[string]string{"label": "unit64"},
+				Description:        "desc64",
+				lastAdvertisedTime: time.Now(),
+			},
+		},
+		testCaseMetric{
+			input: Metric{
 				Namespace:          NewNamespace(NewNamespaceElement("").Value),
 				Version:            10,
 				Timestamp:          time.Now(),
