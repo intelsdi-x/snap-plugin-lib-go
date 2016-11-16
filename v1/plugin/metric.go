@@ -81,6 +81,10 @@ func toProtoMetric(mt Metric) (*rpc.Metric, error) {
 		metric.Data = &rpc.Metric_Int64Data{Int64Data: int64(t)}
 	case int64:
 		metric.Data = &rpc.Metric_Int64Data{Int64Data: t}
+	case uint32:
+		metric.Data = &rpc.Metric_Uint32Data{Uint32Data: t}
+	case uint64:
+		metric.Data = &rpc.Metric_Uint64Data{Uint64Data: t}
 	case []byte:
 		metric.Data = &rpc.Metric_BytesData{BytesData: t}
 	case bool:
@@ -120,6 +124,10 @@ func fromProtoMetric(mt *rpc.Metric) Metric {
 		metric.Data = mt.GetInt64Data()
 	case *rpc.Metric_Int32Data:
 		metric.Data = mt.GetInt32Data()
+	case *rpc.Metric_Uint32Data:
+		metric.Data = mt.GetUint32Data()
+	case *rpc.Metric_Uint64Data:
+		metric.Data = mt.GetUint64Data()
 	case *rpc.Metric_BoolData:
 		metric.Data = mt.GetBoolData()
 	}
