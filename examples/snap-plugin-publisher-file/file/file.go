@@ -21,6 +21,7 @@ package file
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 
@@ -48,6 +49,9 @@ func (f FPublisher) Publish(mts []plugin.Metric, cfg plugin.Config) error {
 	file, err := cfg.GetString("file")
 	if err != nil {
 		return err
+	}
+	if val, err := cfg.GetBool("return_error"); err == nil && val {
+		return errors.New("Houston we have a problem")
 	}
 	fileHandle, _ := os.Create(file)
 	writer := bufio.NewWriter(fileHandle)
