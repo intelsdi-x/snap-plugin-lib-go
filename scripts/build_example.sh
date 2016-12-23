@@ -35,7 +35,13 @@ fi
 
 plugin_src_path=$1
 plugin_name=$(basename "${plugin_src_path}")
-go_build=(go build -a -ldflags "-w")
+git_version=$(_git_version)
+go_build=(go build -ldflags "-w -X main.gitversion=${git_version}")
+
+_info "git commit: $(git log --pretty=format:"%H" -1)"
+
+# Disable CGO for builds.
+export CGO_ENABLED=0
 
 _debug "plugin source: ${plugin_src_path}"
 _info "building ${plugin_name} for ${GOOS}/${GOARCH}"

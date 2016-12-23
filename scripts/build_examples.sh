@@ -29,14 +29,6 @@ __proj_dir="$(dirname "$__dir")"
 
 _info "project path: ${__proj_dir}"
 
-git_version=$(_git_version)
-go_build=(go build -ldflags "-w -X main.gitversion=${git_version}")
-
-_info "git commit: $(git log --pretty=format:"%H" -1)"
-
-# Disable CGO for builds.
-export CGO_ENABLED=0
-
 # rebuild binaries:
 export GOOS=${GOOS:-$(uname -s | tr '[:upper:]' '[:lower:]')}
 export GOARCH=${GOARCH:-"amd64"}
