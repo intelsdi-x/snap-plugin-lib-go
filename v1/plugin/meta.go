@@ -37,7 +37,7 @@ type MetaOpt func(m *meta)
 // ConcurrencyCount is the max number of concurrent calls the plugin
 // should take.  For example:
 // If there are 5 tasks using the plugin and its concurrency count is 2,
-// snapd will keep 3 plugin instances running.
+// snapteld will keep 3 plugin instances running.
 // ConcurrencyCount overwrites the default (5) for a Meta's ConcurrencyCount.
 func ConcurrencyCount(cc int) MetaOpt {
 	return func(m *meta) {
@@ -63,7 +63,7 @@ func RoutingStrategy(r router) MetaOpt {
 	}
 }
 
-// CacheTTL will override the default cache TTL for the this plugin. snapd
+// CacheTTL will override the default cache TTL for the this plugin. snapteld
 // caches metrics on the daemon side for a default of 500ms.
 // CacheTTL overwrites the default (500ms) for a Meta's CacheTTL.
 func CacheTTL(t time.Duration) MetaOpt {

@@ -38,7 +38,7 @@ In order to write a plugin for Snap, it is necessary to define a few methods to 
 
 
 ```go
-// Plugin is an interface shared by all plugins and must implemented by each plugin to communicate with Snap.
+// Plugin is an interface shared by all plugins and must be implemented by each plugin to communicate with Snap.
 type Plugin interface {
 	GetConfigPolicy() (ConfigPolicy, error)
 }
@@ -73,7 +73,7 @@ The available options are defined in [plugin/meta.go](https://github.com/intelsd
 // ConcurrencyCount is the max number of concurrent calls the plugin
 // should take.  For example:
 // If there are 5 tasks using the plugin and its concurrency count is 2,
-// snapd will keep 3 plugin instances running.
+// snapteld will keep 3 plugin instances running.
 // ConcurrencyCount overwrites the default (5) for a Meta's ConcurrencyCount.
 func ConcurrencyCount(cc int) MetaOpt {
 }
@@ -95,7 +95,7 @@ func Unsecure(e bool) MetaOpt {
 func RoutingStrategy(r router) MetaOpt {
 }
 
-// CacheTTL will override the default cache TTL for the this plugin. snapd
+// CacheTTL will override the default cache TTL for the this plugin. snapteld
 // caches metrics on the daemon side for a default of 500ms.
 // CacheTTL overwrites the default (500ms) for a Meta's CacheTTL.
 func CacheTTL(t time.Duration) MetaOpt {

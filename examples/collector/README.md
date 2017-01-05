@@ -7,7 +7,7 @@ For your collector plugin, create a new repository and name your plugin project 
 
 >snap-plugin-[plugin-type]-[plugin-name]
 
-For example: 
+For example:
 >snap-plugin-collector-rand
 
 
@@ -40,7 +40,7 @@ In order to write a plugin for Snap, it is necessary to define a few methods to 
 
 
 ```go
-// Plugin is an interface shared by all plugins and must implemented by each plugin to communicate with Snap.
+// Plugin is an interface shared by all plugins and must be implemented by each plugin to communicate with Snap.
 type Plugin interface {
 	GetConfigPolicy() (ConfigPolicy, error)
 }
@@ -73,7 +73,7 @@ The available options are defined in [plugin/meta.go](https://github.com/intelsd
 // ConcurrencyCount is the max number of concurrent calls the plugin
 // should take.  For example:
 // If there are 5 tasks using the plugin and its concurrency count is 2,
-// snapd will keep 3 plugin instances running.
+// snapteld will keep 3 plugin instances running.
 // ConcurrencyCount overwrites the default (5) for a Meta's ConcurrencyCount.
 func ConcurrencyCount(cc int) MetaOpt {
 }
@@ -95,7 +95,7 @@ func Unsecure(e bool) MetaOpt {
 func RoutingStrategy(r router) MetaOpt {
 }
 
-// CacheTTL will override the default cache TTL for the this plugin. snapd
+// CacheTTL will override the default cache TTL for the this plugin. snapteld
 // caches metrics on the daemon side for a default of 500ms.
 // CacheTTL overwrites the default (500ms) for a Meta's CacheTTL.
 func CacheTTL(t time.Duration) MetaOpt {
@@ -140,6 +140,3 @@ package rand
 You've made a plugin! Now it's time to share it. Create a release by following these [steps](https://help.github.com/articles/creating-releases/). We recommend that your release version match your plugin version, see example [here](https://github.com/intelsdi-x/snap-plugin-lib-go/blob/master/examples/collector/main.go#L29).
 
 Don't forget to announce your plugin release on [slack](https://intelsdi-x.herokuapp.com/) and get your plugin added to the [Plugin Catalog](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_CATALOG.md)!
-
-
-

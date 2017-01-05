@@ -3,7 +3,7 @@ Here you will find example plugins that cover the basics for writing collector, 
 
 ## Build Plugins & Use with Snap
 
-To get these example collector, processor, and publisher plugins to build properly and work with Snap you will need to have [glide](https://glide.sh/) installed in your $PATH. You should also add snapctl and snapd in your $PATH. 
+To get these example collector, processor, and publisher plugins to build properly and work with Snap you will need to have [glide](https://glide.sh/) installed in your $PATH. You should also add snaptel and snapteld in your $PATH. 
 
 To test these plugins with Snap, you will need to have [Snap](https://github.com/intelsdi-x/snap) installed, check out these docs for [Snap setup details](https://github.com/intelsdi-x/snap/blob/master/docs/BUILD_AND_TEST.md#getting-started).
 
@@ -47,12 +47,12 @@ $ glide up
 
 ###3. Build the collector, processor, and/or publisher plugins in the examples folder.
     Use the `go build` command to generate the example binary files for the collector, processor, and publisher.
-    option -o outputs the binary to the specified name 
+    option -o outputs the binary to the specified name
 
 ```
 $ go build -o example-collector examples/collector/main.go
-$ go build -o example-processor examples/processor/main.go 
-$ go build -o example-publisher examples/publisher/main.go 
+$ go build -o example-processor examples/processor/main.go
+$ go build -o example-publisher examples/publisher/main.go
 ```
 
 ###4. Run Snap, Load Plugins, and Run Tasks
@@ -61,7 +61,7 @@ You can now try [running Snap](https://github.com/intelsdi-x/snap#running-snap),
 Below are some sample commands to try:
 
 ```
-$ snapctl plugin load example-collector
+$ snaptel plugin load example-collector
 Plugin loaded
 Name: test-rand-collector
 Version: 1
@@ -69,17 +69,17 @@ Type: collector
 Signed: false
 Loaded Time: Fri, 23 Sep 2016 17:41:44 PDT
 
-$ snapctl plugin list
+$ snaptel plugin list
 NAME 			 VERSION 	 TYPE 		 SIGNED 	 STATUS 	 LOADED TIME
 test-rand-collector 	 1 		 collector 	 false 		 loaded 	 Fri, 23 Sep 2016 17:41:44 PDT
 
-$ snapctl metric list
+$ snaptel metric list
 NAMESPACE 		 VERSIONS
 /random/float 		 1
 /random/integer 	 1
 /random/string 		 1
 
-$ snapctl plugin load example-processor
+$ snaptel plugin load example-processor
 Plugin loaded
 Name: test-reverse-processor
 Version: 1
@@ -87,7 +87,7 @@ Type: processor
 Signed: false
 Loaded Time: Fri, 23 Sep 2016 17:44:12 PDT
 
-$ snapctl plugin load example-publisher
+$ snaptel plugin load example-publisher
 Plugin loaded
 Name: test-file-publisher
 Version: 1
@@ -95,7 +95,7 @@ Type: publisher
 Signed: false
 Loaded Time: Fri, 23 Sep 2016 17:44:23 PDT
 
-$ snapctl plugin list
+$ snaptel plugin list
 NAME 			 VERSION 	 TYPE 		 SIGNED 	 STATUS 	 LOADED TIME
 test-rand-collector 	 1 		 collector 	 false 		 loaded 	 Fri, 23 Sep 2016 17:41:44 PDT
 test-reverse-processor 	 1 		 processor 	 false 		 loaded 	 Fri, 23 Sep 2016 17:44:12 PDT
@@ -104,7 +104,7 @@ test-file-publisher 	 1 		 publisher 	 false 		 loaded 	 Fri, 23 Sep 2016 17:44:
 ```
 
 ### Create a task.
-You can create a task.yml file for these examples using the following code. 
+You can create a task.yml file for these examples using the following code.
 Discover [how tasks work](https://github.com/intelsdi-x/snap/blob/master/docs/TASKS.md).
 
 task.yml
