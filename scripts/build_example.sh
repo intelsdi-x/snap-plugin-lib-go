@@ -38,6 +38,10 @@ plugin_name=$(basename "${plugin_src_path}")
 git_version=$(_git_version)
 go_build=(go build -ldflags "-w -X main.gitversion=${git_version}")
 
+if [[ "${GOOS}" == "windows" ]]; then
+  plugin_name="${plugin_name}.exe"
+fi
+
 _info "git commit: $(git log --pretty=format:"%H" -1)"
 
 # Disable CGO for builds.

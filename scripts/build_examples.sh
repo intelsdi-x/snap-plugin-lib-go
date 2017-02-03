@@ -30,8 +30,8 @@ __proj_dir="$(dirname "$__dir")"
 _info "project path: ${__proj_dir}"
 
 # rebuild binaries:
-export GOOS=${GOOS:-$(uname -s | tr '[:upper:]' '[:lower:]')}
-export GOARCH=${GOARCH:-"amd64"}
+export GOOS=${GOOS:-$(go env GOOS)}
+export GOARCH=${GOARCH:-$(go env GOARCH)}
 
 OS=$(uname -s)
 if [[ "${OS}" == "Darwin" ]]; then
