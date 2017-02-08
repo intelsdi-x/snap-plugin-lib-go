@@ -30,5 +30,5 @@ const (
 )
 
 func main() {
-	plugin.StartProcessor(reverse.RProcessor{}, pluginName, pluginVersion)
+	plugin.StartProcessor(reverse.RProcessor{}, pluginName, pluginVersion, plugin.Unsecure(false))
 }

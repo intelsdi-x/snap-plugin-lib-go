@@ -30,5 +30,5 @@ const (
 )
 
 func main() {
-	plugin.StartCollector(rand.RandCollector{}, pluginName, pluginVersion)
+	plugin.StartCollector(rand.RandCollector{}, pluginName, pluginVersion, plugin.Unsecure(false))
 }

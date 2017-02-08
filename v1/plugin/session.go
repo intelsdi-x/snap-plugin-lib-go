@@ -32,18 +32,23 @@ type Arg struct {
 
 	// enable pprof
 	Pprof bool
+
+	CertPath string
+	KeyPath string
 }
 
 // getArgs returns plugin args or default ones
-func getArgs() error {
+func getArgs() (*Arg, error) {
 	pluginArg := &Arg{}
 	if os.Args[1] == "" {
-		return nil
+		fmt.Fprintf(os.Stderr, "DEBUG: no args")
+		return nil, nil
 	}
 	err := json.Unmarshal([]byte(os.Args[1]), pluginArg)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	fmt.Fprintf(os.Stderr, "DEBUG: got args: %#v", pluginArg)
 
 	// If no port was provided we let the OS select a port for us.
 	// This is safe as address is returned in the Response and keep
@@ -57,10 +62,10 @@ func getArgs() error {
 		PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
 	}
 	if pluginArg.Pprof {
-		return getPort()
+		return pluginArg, getPort()
 	}
 
-	return nil
+	return pluginArg, nil
 }
 
 func getPort() error {
