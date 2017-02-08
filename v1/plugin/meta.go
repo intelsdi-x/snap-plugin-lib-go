@@ -19,7 +19,11 @@ limitations under the License.
 
 package plugin
 
-import "time"
+import (
+	"time"
+	"fmt"
+	"os"
+)
 
 type router int
 
@@ -72,6 +76,12 @@ func CacheTTL(t time.Duration) MetaOpt {
 	}
 }
 
+func Unsecure(u bool) MetaOpt {
+	return func(m *meta) {
+		m.Unsecure = u
+	}
+}
+
 type pluginType int
 
 const (
@@ -94,10 +104,13 @@ type meta struct {
 	Unsecure         bool
 	CacheTTL         time.Duration
 	RoutingStrategy  router
+	CertPath         string
+	KeyPath          string
 }
 
 // newMeta sets defaults, applies options, and then returns a meta struct
 func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta {
+	fmt.Fprintf(os.Stderr, "DEBUG: generating new meta; plugin_name= %v, my pid#= %v", name, os.Getpid())
 	p := meta{
 		Name:             name,
 		Version:          version,

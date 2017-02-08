@@ -26,6 +26,7 @@ import (
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
@@ -60,10 +61,21 @@ type Publisher interface {
 // StartCollector is given a Collector implementation and its metadata,
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
-func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt) int {
-	getArgs()
+func StartCollector (plugin Collector, name string, version int, opts ...MetaOpt) int {
+	args, _ := getArgs()
 	m := newMeta(collectorType, name, version, opts...)
-	server := grpc.NewServer()
+	m.CertPath = args.CertPath
+	m.KeyPath = args.KeyPath
+	creds, err := credentials.NewServerTLSFromFile(args.CertPath, args.KeyPath)
+	if err != nil {
+	  panic(err)
+	}
+	//lis, err := net.Listen("tcp", port)
+	//if err != nil {
+	//  panic(err)
+	//}
+	//server := grpc.NewServer()
+	server := grpc.NewServer(grpc.Creds(creds))
 	// TODO(danielscottt) SSL
 	proxy := &collectorProxy{
 		plugin:      plugin,
@@ -77,10 +89,18 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt) int {
-	getArgs()
+	args, _ := getArgs()
 	m := newMeta(processorType, name, version, opts...)
-	server := grpc.NewServer()
+	//server := grpc.NewServer()
+	m.CertPath = args.CertPath
+	m.KeyPath = args.KeyPath
+	creds, err := credentials.NewServerTLSFromFile(args.CertPath, args.KeyPath)
+	if err != nil {
+	  panic(err)
+	}
+
 	// TODO(danielscottt) SSL
+	server := grpc.NewServer(grpc.Creds(creds))
 	proxy := &processorProxy{
 		plugin:      plugin,
 		pluginProxy: *newPluginProxy(plugin),
@@ -93,10 +113,18 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt) int {
-	getArgs()
+	args, _ := getArgs()
 	m := newMeta(publisherType, name, version, opts...)
-	server := grpc.NewServer()
+	//server := grpc.NewServer()
+		m.CertPath = args.CertPath
+	m.KeyPath = args.KeyPath
+	creds, err := credentials.NewServerTLSFromFile(args.CertPath, args.KeyPath)
+	if err != nil {
+	  panic(err)
+	}
+
 	// TODO(danielscottt) SSL
+	server := grpc.NewServer(grpc.Creds(creds))
 	proxy := &publisherProxy{
 		plugin:      plugin,
 		pluginProxy: *newPluginProxy(plugin),

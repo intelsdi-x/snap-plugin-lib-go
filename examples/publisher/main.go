@@ -30,5 +30,5 @@ const (
 )
 
 func main() {
-	plugin.StartPublisher(file.FPublisher{}, pluginName, pluginVersion)
+	plugin.StartPublisher(file.FPublisher{}, pluginName, pluginVersion, plugin.Unsecure(false))
 }
