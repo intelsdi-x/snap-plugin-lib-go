@@ -57,6 +57,40 @@ type Publisher interface {
 	Publish([]Metric, Config) error
 }
 
+// StreamCollector is a Collector that can send back metrics on it's own
+// defined interval (within configurable limits). These limits are set by the
+// SetMaxBuffer and SetMaxCollectionDuration funcs.
+type StreamCollector interface {
+	Plugin
+
+	// StreamMetrics allows the plugin to send/receive metrics on a channel
+	// Arguments are (in order):
+	//
+	// A channel for metrics into the plugin from Snap -- which
+	// are the metric types snap is requesting the plugin to collect.
+	//
+	// A channel for metrics from the plugin to Snap -- the actual
+	// collected metrics from the plugin.
+	//
+	// A channel for error strings that the library will report to snap
+	// as task errors.
+	StreamMetrics(chan []Metric, chan []Metric, chan string) error
+	GetMetricTypes(Config) ([]Metric, error)
+}
+
+func StartStreamCollector(plugin StreamCollector, name string, version int, opts ...MetaOpt) int {
+	getArgs()
+	opts = append(opts, rpcType(gRPCStream))
+	m := newMeta(collectorType, name, version, opts...)
+	server := grpc.NewServer()
+	proxy := &StreamProxy{
+		plugin:      plugin,
+		pluginProxy: *newPluginProxy(plugin),
+	}
+	rpc.RegisterStreamCollectorServer(server, proxy)
+	return startPlugin(server, m, &proxy.pluginProxy)
+}
+
 // StartCollector is given a Collector implementation and its metadata,
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.

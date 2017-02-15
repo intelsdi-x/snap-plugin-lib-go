@@ -72,12 +72,26 @@ func CacheTTL(t time.Duration) MetaOpt {
 	}
 }
 
+// metaRPCType sets the metaRPCType for the meta object. Used only internally.
+func rpcType(typ metaRPCType) MetaOpt {
+	return func(m *meta) {
+		m.RPCType = int(typ)
+	}
+}
+
 type pluginType int
 
 const (
 	collectorType pluginType = iota
 	processorType
 	publisherType
+)
+
+type metaRPCType int
+
+const (
+	gRPC       metaRPCType = 2
+	gRPCStream             = 3
 )
 
 // meta is the metadata for a plugin
