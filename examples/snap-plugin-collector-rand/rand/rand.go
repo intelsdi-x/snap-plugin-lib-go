@@ -24,6 +24,8 @@ import (
 	"math/rand"
 	"time"
 
+	"errors"
+
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
@@ -71,6 +73,9 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 	metrics := []plugin.Metric{}
 	for idx, mt := range mts {
 		mts[idx].Timestamp = time.Now()
+		if val, err := mt.Config.GetBool("return_error"); err == nil && val {
+			return nil, errors.New("Houston, we have a problem!")
+		}
 		if val, err := mt.Config.GetBool("testbool"); err == nil && val {
 			continue
 		}

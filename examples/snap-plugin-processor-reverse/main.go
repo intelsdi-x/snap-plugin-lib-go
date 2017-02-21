@@ -20,7 +20,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/intelsdi-x/snap-plugin-lib-go/examples/processor/reverse"
+	"github.com/intelsdi-x/snap-plugin-lib-go/examples/snap-plugin-processor-reverse/reverse"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 

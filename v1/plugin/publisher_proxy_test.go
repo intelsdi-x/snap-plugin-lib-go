@@ -37,8 +37,9 @@ func TestPublisher(t *testing.T) {
 				pluginProxy: *newPluginProxy(newMockPublisher()),
 				plugin:      newMockErrPublisher(),
 			}
-			_, err := pp.Publish(context.Background(), &rpc.PubProcArg{})
-			So(err, ShouldNotBeNil)
+			errReply, err := pp.Publish(context.Background(), &rpc.PubProcArg{})
+			So(errReply.Error, ShouldResemble, "error")
+			So(err, ShouldBeNil)
 		})
 		Convey("Succeed while publishing", func() {
 			pp := publisherProxy{
