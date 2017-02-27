@@ -2,15 +2,14 @@
 
 This is a library for writing plugins in Go for the [Snap telemetry framework](https://github.com/intelsdi-x/snap). 
 
-Snap has three different plugin types and for instructions on how to write a plugin check out the [collector](examples/collector/README.md), [processor](examples/processor/README.md), and [publisher](examples/publisher/README.md) plugin docs.
+Snap has three different plugin types and for instructions on how to write a plugin check out the [collector](/examples/snap-plugin-collector-rand/README.md), [processor](examples/snap-plugin-processor-reverse/README.md), and [publisher](examples/snap-plugin-publisher-file/README.md) plugin docs.
 
 Before writing a Snap plugin:
 
 * See if one already exists in the [Plugin Catalog](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_CATALOG.md) 
-* See if someone mentioned it in the [plugin wishlist](https://github.com/intelsdi-x/snap/labels/plugin-wishlist)
+* See if someone mentioned it in the [plugin wishlist](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_CATALOG.md#wishlist)
 
-If you do decide to write a plugin, open a new issue following the plugin [wishlist guidelines](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_CATALOG.md#wish-list) and let us know you are working on one!
-
+If you do decide to write a plugin check out the [plugin authoring docs](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_AUTHORING.md#plugin-authoring) and let us know you are working on one!
 
 ## Brief Overview of Snap Architecture
 
