@@ -41,3 +41,5 @@ import:
   - naming
   - peer
   - transport
+- package: github.com/Sirupsen/logrus
+  version: ^0.11.5

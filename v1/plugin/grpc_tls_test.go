@@ -25,30 +25,41 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
-const (
-	maxPingTimeoutLimit = 65535
-)
-
 var (
 	mockInputOutputInUse *mockInputOutput
 	mockInputRootCerts   []string
-	prevPingTimeoutLimit int
 	grpcOptsBuilderInUse *grpcOptsBuilder
 )
+
+func init() {
+	// Filter out go test flags
+	getOSArgs = func() []string {
+		args := []string{}
+		for _, v := range os.Args {
+			if !strings.HasPrefix(v, "-test") {
+				args = append(args, v)
+			}
+		}
+		return args
+	}
+}
 
 type testProxyCtor struct {
 	prevProxyCtor    pluginProxyConstructor
@@ -128,36 +139,45 @@ func newGrpcOptsBuilder() *grpcOptsBuilder {
 }
 
 func TestIncorrectPluginArgsFail(t *testing.T) {
+	// The tests below are designed to recover from a panic so we interpret
+	// the return code and panic if the grpc server could not be created.
+	cli.OsExiter = func(ret int) {
+		// a return code of 2 indicates a failure to build the grpc server
+		if ret == 2 {
+			panic(errors.New("failed to create grpc server in test"))
+		}
+		os.Exit(ret)
+	}
 	Convey("Intending to start secure plugin server", t, func() {
 		setUpSecureTestcase(true, true)
 		Convey("omitting Cert Path from arguments will make plugin fail", func() {
-			mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
+			mockInputOutputInUse.mockArg = fmt.Sprintf(`
 				{"KeyPath":"%s","TLSEnabled":true}`,
-				tlsTestSrv+keyFileExt))
+				tlsTestSrv+keyFileExt)
 			So(func() {
 				startSecureGrpcPlugin(t, &mockCollector{}, collectorType, "mock-coll")
 			}, ShouldPanic)
 		})
 		Convey("omitting Key Path from arguments will make plugin fail", func() {
-			mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
+			mockInputOutputInUse.mockArg = fmt.Sprintf(`
 				{"CertPath":"%s","TLSEnabled":true}`,
-				tlsTestSrv+crtFileExt))
+				tlsTestSrv+crtFileExt)
 			So(func() {
 				startSecureGrpcPlugin(t, &mockCollector{}, collectorType, "mock-coll")
 			}, ShouldPanic)
 		})
 		Convey("omitting TLSEnabled flag from arguments will make plugin fail", func() {
-			mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
+			mockInputOutputInUse.mockArg = fmt.Sprintf(`
 				{"CertPath":"%s","KeyPath":"%s"}`,
-				tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt))
+				tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt)
 			So(func() {
 				startSecureGrpcPlugin(t, &mockCollector{}, collectorType, "mock-coll")
 			}, ShouldPanic)
 		})
 		Convey("adding mismatched certificate and key in arguments will make plugin fail", func() {
-			mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
+			mockInputOutputInUse.mockArg = fmt.Sprintf(`
 				{"CertPath":"%s","KeyPath":"%s","TLSEnabled":true}`,
-				tlsTestSrv+crtFileExt, tlsTestCli+keyFileExt))
+				tlsTestSrv+crtFileExt, tlsTestCli+keyFileExt)
 			So(func() {
 				startSecureGrpcPlugin(t, &mockCollector{}, collectorType, "mock-coll")
 			}, ShouldPanic)
@@ -363,17 +383,16 @@ func setUpSecureTestcase(serverTLSUp, clientTLSUp bool) {
 	libInputOutput = mockInputOutputInUse
 	grpcOptsBuilderInUse = newGrpcOptsBuilder()
 	if serverTLSUp {
-		rootCertPathsArg := ""
 		var certPaths string
 		if len(mockInputRootCerts) > 0 {
 			certPaths = strings.Join(mockInputRootCerts, string(filepath.ListSeparator))
 		} else {
 			certPaths = tlsTestCA + crtFileExt
 		}
-		rootCertPathsArg = fmt.Sprintf(`,"RootCertPaths":"%s"`, certPaths)
-		mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
-			{"CertPath":"%s","KeyPath":"%s","TLSEnabled":true%s}`,
-			tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt, rootCertPathsArg))
+		rootCertPathsArg := fmt.Sprintf(`"RootCertPaths":"%s"`, certPaths)
+		mockInputOutputInUse.mockArg = fmt.Sprintf(`
+			{"CertPath":"%s","KeyPath":"%s","TLSEnabled":true,"LogLevel":5,%s}`,
+			tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt, rootCertPathsArg)
 	}
 	if clientTLSUp {
 		grpcOptsBuilderInUse.

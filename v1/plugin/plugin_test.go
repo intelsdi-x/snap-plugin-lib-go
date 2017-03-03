@@ -25,18 +25,31 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
-	"net"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"os"
+
+	log "github.com/Sirupsen/logrus"
 	. "github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
 )
+
+func init() {
+	// Filter out go test flags
+	getOSArgs = func() []string {
+		args := []string{}
+		for _, v := range os.Args {
+			if !strings.HasPrefix(v, "-test") {
+				args = append(args, v)
+			}
+		}
+		return args
+	}
+}
 
 const (
 	tlsTestCA     = "libtest-CA"
@@ -47,10 +60,7 @@ const (
 	badCrtFileExt = "-BAD.crt"
 )
 
-var (
-	metricMap         = getMetricData()
-	testFilesToRemove []string
-)
+var testFilesToRemove []string
 
 type mockTLSSetup struct {
 	prevSetup tlsServerSetup
@@ -88,6 +98,10 @@ func TestPlugin(t *testing.T) {
 			i := StartCollector(newMockCollector(), "collector", 0, Exclusive(true), RoutingStrategy(1))
 			So(i, ShouldEqual, 0)
 		})
+		Convey("stream collector plugin should start successfully", func() {
+			i := StartStreamCollector(newMockStreamer(), "collector", 1)
+			So(i, ShouldEqual, 0)
+		})
 		Convey("processor plugin should start successfully", func() {
 			j := StartProcessor(newMockProcessor(), "processor", 1, Exclusive(false))
 			So(j, ShouldEqual, 0)
@@ -107,26 +121,21 @@ func TestParsingArgs(t *testing.T) {
 	Convey("With plugin lib parsing command line arguments", t, func() {
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
-		Convey("invalid JSON will be rejected with an error", func() {
-			mockInputOutput.mockArgs = strings.Fields("main {::invalid::JSON::}")
-			_, err := getArgs()
-			So(err, ShouldNotBeNil)
-		})
 		Convey("ListenPort should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"ListenPort":"4414"}`)
-			args, err := getArgs()
+			mockInputOutput.mockArg = `{"ListenPort":"4414"}`
+			args, err := processArg(&Arg{})
 			So(err, ShouldBeNil)
 			So(args.ListenPort, ShouldEqual, "4414")
 		})
 		Convey("PingTimeoutDuration should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"PingTimeoutDuration":3141}`)
-			args, err := getArgs()
+			mockInputOutput.mockArg = `{"PingTimeoutDuration":3141}`
+			args, err := processArg(&Arg{})
 			So(err, ShouldBeNil)
 			So(args.PingTimeoutDuration, ShouldEqual, 3141)
 		})
 		Convey("RootCertPaths should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"RootCertPaths":"test-cert.crt"}`)
-			args, err := getArgs()
+			mockInputOutput.mockArg = `{"RootCertPaths":"test-cert.crt"}`
+			args, err := processArg(&Arg{})
 			So(err, ShouldBeNil)
 			So(args.RootCertPaths, ShouldEqual, "test-cert.crt")
 		})
@@ -138,10 +147,12 @@ func TestParsingArgs(t *testing.T) {
 
 func TestPassingPluginMeta(t *testing.T) {
 	Convey("With plugin lib transferring plugin meta", t, func() {
+		log.SetLevel(log.DebugLevel)
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
 		Convey("all meta arguments should be present in plugin response", func() {
-			StartPublisher(newMockPublisher(), "mock-publisher-for-meta", 9, Exclusive(true), ConcurrencyCount(11), RoutingStrategy(StickyRouter), CacheTTL(305*time.Millisecond), rpcType(gRPC))
+			i := StartPublisher(newMockPublisher(), "mock-publisher-for-meta", 9, Exclusive(true), ConcurrencyCount(11), RoutingStrategy(StickyRouter), CacheTTL(305*time.Millisecond), rpcType(gRPC))
+			So(i, ShouldEqual, 0)
 			var response preamble
 			err := json.Unmarshal([]byte(mockInputOutput.output[0]), &response)
 			if err != nil {
@@ -221,7 +232,6 @@ func TestMakeTLSConfig(t *testing.T) {
 		})
 	})
 }
-
 func TestMakeGRPCCredentials(t *testing.T) {
 	Convey("Having TLS-aware plugin library", t, func() {
 		Convey("and plugin metadata with TLS enabled", func() {
@@ -280,232 +290,6 @@ func TestMain(m *testing.M) {
 	retCode := m.Run()
 	tearDownTestMain()
 	os.Exit(retCode)
-}
-
-type mockPlugin struct {
-	err error
-}
-
-func newMockPlugin() *mockPlugin {
-	return &mockPlugin{}
-}
-
-func newMockErrPlugin() *mockPlugin {
-	return &mockPlugin{err: errors.New("error")}
-}
-
-type mockInputOutput struct {
-	mockArgs        []string
-	output          []string
-	doReadOSArgs    func() []string
-	doPrintOut      func(string)
-	prevInputOutput osInputOutput
-}
-
-func (f *mockInputOutput) readOSArgs() []string {
-	return f.doReadOSArgs()
-}
-
-func (f *mockInputOutput) printOut(data string) {
-	f.doPrintOut(data)
-}
-
-func newMockInputOutput(prevInputOutput osInputOutput) *mockInputOutput {
-	mock := mockInputOutput{mockArgs: strings.Fields("mock {}")}
-	mock.prevInputOutput = prevInputOutput
-	mock.doPrintOut = func(data string) {
-		mock.output = append(mock.output, data)
-	}
-	mock.doReadOSArgs = func() []string {
-		return mock.mockArgs
-	}
-	return &mock
-}
-
-func (mp *mockPlugin) GetConfigPolicy() (ConfigPolicy, error) {
-	if mp.err != nil {
-		return ConfigPolicy{}, errors.New("error")
-	}
-	cp := NewConfigPolicy()
-
-	cp.AddNewBoolRule([]string{"log"}, "logLevel", true, SetDefaultBool(true))
-	cp.AddNewBoolRule([]string{"cache"}, "cacheTime", true, SetDefaultBool(false))
-
-	cp.AddNewFloatRule([]string{"float"}, "low", true, SetDefaultFloat(32.1))
-	cp.AddNewFloatRule([]string{"cache"}, "high", true, SetDefaultFloat(2399.58))
-
-	cp.AddNewIntRule([]string{"xyz"}, "logLevel", false, SetDefaultInt(30))
-	cp.AddNewIntRule([]string{"abc"}, "cacheTime", true, SetDefaultInt(50))
-
-	cp.AddNewStringRule([]string{"log"}, "logLevel", true, SetDefaultString("123"))
-	cp.AddNewStringRule([]string{"cache"}, "cacheTime", true, SetDefaultString("tyty"))
-
-	return (*cp), nil
-}
-
-type mockStreamer struct {
-	mockPlugin
-	err                error
-	maxBuffer          int64
-	maxCollectDuration time.Duration
-	inMetric           chan []Metric
-	outMetric          chan []Metric
-	action             func(chan []Metric, time.Duration, []Metric)
-}
-
-func newMockStreamer() *mockStreamer {
-	return &mockStreamer{}
-}
-
-func newMockErrStreamer() *mockStreamer {
-	return &mockStreamer{err: errors.New("empty")}
-}
-
-func newMockStreamerStream(action func(chan []Metric, time.Duration, []Metric)) *mockStreamer {
-	return &mockStreamer{action: action}
-}
-
-func (mc *mockStreamer) doAction(t time.Duration, mts []Metric) {
-	go mc.action(mc.outMetric, t, mts)
-}
-func (mc *mockStreamer) GetMetricTypes(cfg Config) ([]Metric, error) {
-	if mc.err != nil {
-		return nil, errors.New("error")
-	}
-
-	mts := []Metric{}
-	for _, v := range metricMap {
-		mts = append(mts, v)
-	}
-	return mts, nil
-}
-
-func (mc *mockStreamer) StreamMetrics(i chan []Metric, o chan []Metric, _ chan string) error {
-
-	if mc.err != nil {
-		return errors.New("error")
-	}
-	mc.inMetric = i
-	mc.outMetric = o
-	return nil
-}
-
-type mockCollector struct {
-	mockPlugin
-	err              error
-	doCollectMetrics func([]Metric) ([]Metric, error)
-	doGetMetricTypes func(Config) ([]Metric, error)
-}
-
-func newMockCollector() *mockCollector {
-	return &mockCollector{}
-}
-
-func newMockErrCollector() *mockCollector {
-	return &mockCollector{err: errors.New("empty")}
-}
-
-func (mc *mockCollector) GetMetricTypes(cfg Config) ([]Metric, error) {
-	if mc.err != nil {
-		return nil, errors.New("error")
-	}
-	if mc.doGetMetricTypes != nil {
-		return mc.doGetMetricTypes(cfg)
-	}
-	mts := []Metric{}
-	for _, v := range metricMap {
-		mts = append(mts, v)
-	}
-	return mts, nil
-}
-
-func (mc *mockCollector) CollectMetrics(mts []Metric) ([]Metric, error) {
-	if mc.err != nil {
-		return nil, errors.New("error")
-	}
-	if mc.doCollectMetrics != nil {
-		return mc.doCollectMetrics(mts)
-	}
-	return mts, nil
-}
-
-type mockProcessor struct {
-	mockPlugin
-	err       error
-	doProcess func([]Metric, Config) ([]Metric, error)
-}
-
-func newMockProcessor() *mockProcessor {
-	return &mockProcessor{}
-}
-
-func newMockErrProcessor() *mockProcessor {
-	return &mockProcessor{err: errors.New("error")}
-}
-
-func (mp *mockProcessor) Process(mts []Metric, cfg Config) ([]Metric, error) {
-	if mp.err != nil {
-		return nil, mp.err
-	}
-	if mp.doProcess != nil {
-		return mp.doProcess(mts, cfg)
-	}
-	metrics := []Metric{}
-	for _, m := range mts {
-		if m.Version%2 == 0 {
-			metrics = append(metrics, m)
-		}
-	}
-	return metrics, nil
-}
-
-type mockPublisher struct {
-	mockPlugin
-	err       error
-	doPublish func([]Metric, Config) error
-}
-
-func newMockPublisher() *mockPublisher {
-	return &mockPublisher{}
-}
-
-func newMockErrPublisher() *mockPublisher {
-	return &mockPublisher{err: errors.New("error")}
-}
-
-func (mpb *mockPublisher) Publish(mts []Metric, cfg Config) error {
-	if mpb.err != nil {
-		return mpb.err
-	}
-	if mpb.doPublish != nil {
-		return mpb.doPublish(mts, cfg)
-	}
-	return nil
-}
-
-func getMetricData() map[string]Metric {
-	mm := map[string]Metric{}
-	for i := 0; i < 10; i++ {
-		m := Metric{
-			Namespace: NewNamespace("a", "b", "c"),
-			Version:   int64(i),
-			Config:    map[string]interface{}{"key": 123},
-			Data:      i,
-			Tags:      map[string]string{fmt.Sprintf("tag%d", i): fmt.Sprintf("value%d", i)},
-			Unit:      "int",
-			Timestamp: time.Now(),
-		}
-		idx := fmt.Sprintf("%s.%d", m.Namespace, m.Version)
-		mm[idx] = m
-	}
-	return mm
-}
-
-type mockServer struct {
-}
-
-func (ms *mockServer) Serve(net.Listener) error {
-	return errors.New("error")
 }
 
 // buildTLSCerts builds a set of certificates and private keys for testing TLS.

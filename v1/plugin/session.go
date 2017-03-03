@@ -3,25 +3,20 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
-	"net/http/pprof"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
-)
+	"net/http/pprof"
 
-var (
-	listenPort = "0"
-	LogLevel   = uint8(2)
-	pprofPort  = "0"
+	log "github.com/Sirupsen/logrus"
+	"github.com/julienschmidt/httprouter"
 )
 
 // Arg represents arguments passed to startup of Plugin
 type Arg struct {
 	// Plugin log level, see logrus.Loglevel
-	LogLevel uint8
+	LogLevel int
 	// Ping timeout duration
 	PingTimeoutDuration time.Duration
 
@@ -44,39 +39,22 @@ type Arg struct {
 	TLSEnabled bool
 }
 
-// getArgs returns plugin args or default ones
-func getArgs() (*Arg, error) {
-	pluginArg := &Arg{}
-	osArgs := libInputOutput.readOSArgs()
+// processArg is provided *Arg and returns *Arg after unmarshaling the first command line argument which is expected to be valid JSON.
+func processArg(arg *Arg) (*Arg, error) {
+	osArg := libInputOutput.readOSArg()
 	// default parameters - can be parsed as JSON
-	paramStr := "{}"
-	if len(osArgs) > 1 && osArgs[1] != "" {
-		paramStr = osArgs[1]
+	if osArg == "" {
+		osArg = "{}"
 	}
-	err := json.Unmarshal([]byte(paramStr), pluginArg)
+	err := json.Unmarshal([]byte(osArg), arg)
 	if err != nil {
 		return nil, err
 	}
 
-	// If no port was provided we let the OS select a port for us.
-	// This is safe as address is returned in the Response and keep
-	// alive prevents unattended plugins.
-	if pluginArg.ListenPort != "" {
-		listenPort = pluginArg.ListenPort
-	}
-
-	// If PingTimeoutDuration was provided we set it
-	if pluginArg.PingTimeoutDuration != 0 {
-		PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
-	}
-	if pluginArg.Pprof {
-		return pluginArg, getPort()
-	}
-
-	return pluginArg, nil
+	return arg, nil
 }
 
-func getPort() error {
+func startPprof() (string, error) {
 	router := httprouter.New()
 	router.GET("/debug/pprof/", index)
 	router.GET("/debug/pprof/block", index)
@@ -89,20 +67,19 @@ func getPort() error {
 	router.GET("/debug/pprof/trace", trace)
 	addr, err := net.ResolveTCPAddr("tcp", ":0")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		return err
+		return "", err
 	}
-	pprofPort = fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port)
 
 	go func() {
 		log.Fatal(http.Serve(l, router))
 	}()
 
-	return nil
+	return fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port), nil
 }
 
 func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

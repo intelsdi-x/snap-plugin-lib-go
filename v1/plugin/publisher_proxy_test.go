@@ -59,7 +59,7 @@ func TestPublisher(t *testing.T) {
 func getTestData() ([]*rpc.Metric, error) {
 	input := []*rpc.Metric{}
 
-	mp := getMetricData()
+	mp := getMockMetricDataMap()
 	for _, v := range mp {
 		m, err := toProtoMetric(v)
 		if err != nil {

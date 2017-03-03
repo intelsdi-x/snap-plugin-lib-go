@@ -27,6 +27,7 @@ import (
 	"errors"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -54,8 +55,23 @@ var (
 	}
 )
 
+var req bool = false
+
 func init() {
 	rand.Seed(42)
+
+	//The required-config flag is added for testing plugin-lib-go.
+	//When the flag is set, an additional policy will be added in GetConfigPolicy().
+	//This additional policy has a required field. This simulates
+	//the situation when a plugin requires a config to load.
+	plugin.AddFlag(
+		cli.BoolFlag{
+			Name:        "required-config",
+			Hidden:      false,
+			Usage:       "Plugin requires config passed in",
+			Destination: &req,
+		},
+	)
 }
 
 // Mock collector implementation used for testing
@@ -79,7 +95,15 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 		if val, err := mt.Config.GetBool("testbool"); err == nil && val {
 			continue
 		}
-		if mt.Namespace[len(mt.Namespace)-1].Value == "integer" {
+
+		if mt.Namespace[0].Value == "static" {
+			var err error
+			mts[idx].Data, err = mts[idx].Config.GetString("value")
+			if err != nil {
+				return nil, fmt.Errorf("Invalid or missing value key.")
+			}
+			metrics = append(metrics, mts[idx])
+		} else if mt.Namespace[len(mt.Namespace)-1].Value == "integer" {
 			if val, err := mt.Config.GetInt("testint"); err == nil {
 				mts[idx].Data = val
 			} else {
@@ -117,8 +141,16 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 	The metrics returned will be advertised to users who list all the metrics and will become targetable by tasks.
 */
 func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
-	metrics := []plugin.Metric{}
+	//Simulate throwing error when a config is required but not passed in
+	if req && len(cfg) < 1 {
+		return nil, fmt.Errorf("! When -required-config is set you must provide a config. Example: -config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'\n")
+	}
+	//Simulate throwing error when dependencies not met
+	if _, ok := cfg["depsReq"]; ok {
+		return nil, fmt.Errorf("! Dependency XX required. Run `make deps` to resolve.")
+	}
 
+	metrics := []plugin.Metric{}
 	vals := []string{"integer", "float", "string"}
 	for _, val := range vals {
 		metric := plugin.Metric{
@@ -127,7 +159,12 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 		}
 		metrics = append(metrics, metric)
 	}
-
+	if req {
+		metrics = append(metrics, plugin.Metric{
+			Namespace: plugin.NewNamespace("static", "string"),
+			Version:   1,
+		})
+	}
 	return metrics, nil
 }
 
@@ -140,6 +177,14 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 */
 func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
+
+	//The required-config flag is used for testing plugin-lib-go
+	if req {
+		policy.AddNewStringRule([]string{"static", "string"},
+			"value",
+			true,
+		)
+	}
 
 	policy.AddNewIntRule([]string{"random", "integer"},
 		"testint",
@@ -159,6 +204,7 @@ func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 
 	policy.AddNewBoolRule([]string{"random"},
 		"testbool",
-		false)
+		false,
+		plugin.SetDefaultBool(false))
 	return *policy, nil
 }

@@ -46,8 +46,8 @@ func TestGetMetricTypes(t *testing.T) {
 			for _, m := range r.GetMetrics() {
 				tm := fromProtoMetric(m)
 				idx := fmt.Sprintf("%s.%d", tm.Namespace, tm.Version)
-				So(tm.Namespace.Strings(), ShouldResemble, metricMap[idx].Namespace.Strings())
-				So(tm.Tags, ShouldEqual, metricMap[idx].Tags)
+				So(tm.Namespace.Strings(), ShouldResemble, getMockMetricDataMap()[idx].Namespace.Strings())
+				So(tm.Tags, ShouldResemble, getMockMetricDataMap()[idx].Tags)
 			}
 		})
 		Convey("invalid metric types", func() {
