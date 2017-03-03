@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+
 	"net/http/pprof"
 	"time"
 
@@ -16,6 +17,9 @@ var (
 	listenPort = "0"
 	LogLevel   = uint8(2)
 	pprofPort  = "0"
+	Pprof      = false
+	config     string
+	verbose    bool
 )
 
 // Arg represents arguments passed to startup of Plugin

@@ -26,8 +26,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -60,6 +62,8 @@ type Publisher interface {
 
 	Publish([]Metric, Config) error
 }
+
+var App *cli.App
 
 // StreamCollector is a Collector that can send back metrics on it's own
 // defined interval (within configurable limits). These limits are set by the
@@ -197,15 +201,18 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
 	args, err := getArgs()
 	if err != nil {
+		fmt.Println("ERROR 1")
 		return nil, nil, err
 	}
 	m = newMeta(typeOfPlugin, name, version, opts...)
 
 	if err := applySecurityArgsToMeta(m, args); err != nil {
+		fmt.Println("ERROR 2")
 		return nil, nil, err
 	}
 	creds, err := makeGRPCCredentials(m)
 	if err != nil {
+		fmt.Println("ERROR 3")
 		return nil, nil, err
 	}
 	if m.TLSEnabled {
@@ -229,7 +236,7 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterCollectorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartProcessor is given a Processor implementation and its metadata,
@@ -245,7 +252,7 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterProcessorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartPublisher is given a Publisher implementation and its metadata,
@@ -261,7 +268,7 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterPublisherServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartStreamCollector is given a StreamCollector implementation and its metadata,
@@ -278,7 +285,7 @@ func StartStreamCollector(plugin StreamCollector, name string, version int, opts
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterStreamCollectorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 type server interface {
@@ -294,7 +301,38 @@ type preamble struct {
 	ErrorMessage  string
 }
 
-func startPlugin(srv server, m *meta, p *pluginProxy) int {
+func startPlugin(srv server, m meta, p *pluginProxy) int {
+	app := cli.NewApp()
+	app.Name = m.Name
+	app.Version = strconv.Itoa(m.Version)
+	app.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
+	//TODO: optional set description field
+
+	app.Flags = []cli.Flag{flConfig, flVerbose, flPort, flPingTimeout, flPprof}
+
+	app.Action = func(c *cli.Context) error {
+		if c.NArg() > 0 {
+			printPreamble(srv, &m, p)
+		} else { //implies run diagnostics
+			if config != "" {
+				fmt.Println("The config file you passed in was:  " + config + " the contents are below")
+				fmt.Println("TODO: contents of file")
+				//apply config
+			}
+			showDiagnostics()
+		}
+		if Pprof {
+			return getPort()
+		}
+
+		return nil
+	}
+	app.Run(os.Args)
+
+	return 0
+}
+
+func printPreamble(srv server, m *meta, p *pluginProxy) error {
 	l, err := net.Listen("tcp", ":"+listenPort)
 	if err != nil {
 		panic("Unable to get open port")
@@ -328,5 +366,31 @@ func startPlugin(srv server, m *meta, p *pluginProxy) int {
 	go p.HeartbeatWatch()
 	// TODO(danielscottt): exit code
 	<-p.halt
-	return 0
+
+	return nil
+}
+
+// GetPluginType converts a pluginType to a string
+// describing what type of plugin this is
+func getPluginType(plType pluginType) string {
+	switch plType {
+	case collectorType:
+		return "collector"
+
+	case publisherType:
+		return "publisher"
+
+	case processorType:
+		return "processor"
+	}
+	return ""
+}
+
+func showDiagnostics() error {
+	if verbose {
+		fmt.Print("Show VERBOSE diagnostics!")
+	} else {
+		fmt.Print("SHOW DIAGNOSTICS!")
+	}
+	return nil
 }
