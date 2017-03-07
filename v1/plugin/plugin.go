@@ -27,6 +27,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"github.com/urfave/cli"
@@ -314,12 +315,32 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		if c.NArg() > 0 {
 			printPreamble(srv, &m, p)
 		} else { //implies run diagnostics
+			var c Config
 			if config != "" {
-				fmt.Println("The config file you passed in was:  " + config + " the contents are below")
-				fmt.Println("TODO: contents of file")
-				//apply config
+				fmt.Println("TODO: apply config")
+				fmt.Println("TODO: parse into a Config type")
+				//apply config ?
+				//flag will default config to "" if nothing passed in
+
+				c = Config{
+					"user":       "john",
+					"someint":    1234,
+					"somefloat":  3.14,
+					"somebool":   true,
+					"user2":      "jane",
+					"someint2":   4321,
+					"somefloat2": 4.13,
+				}
 			}
-			showDiagnostics()
+
+			switch p.plugin.(type) {
+			case Collector:
+				showDiagnostics(m, p, c)
+			case Processor:
+				fmt.Println("Diagnostics not currently available for processor plugins.")
+			case Publisher:
+				fmt.Println("Diagnostics not currently available for publisher plugins.")
+			}
 		}
 		if Pprof {
 			return getPort()
@@ -386,11 +407,52 @@ func getPluginType(plType pluginType) string {
 	return ""
 }
 
-func showDiagnostics() error {
+func showDiagnostics(m meta, p *pluginProxy, c Config) error {
+	defer timeTrack(time.Now(), "showDiagnostics")
 	if verbose {
-		fmt.Print("Show VERBOSE diagnostics!")
+		fmt.Println("Show VERBOSE diagnostics!")
 	} else {
-		fmt.Print("SHOW DIAGNOSTICS!")
+		fmt.Println("SHOW DIAGNOSTICS!")
+		met, err := printMetricTypes(p, c)
+		if err != nil {
+			return err
+		}
+
+		err = printCollectMetrics(p, met)
+		if err != nil {
+			return err
+		}
+
 	}
 	return nil
+}
+
+func printMetricTypes(p *pluginProxy, conf Config) ([]Metric, error) {
+	defer timeTrack(time.Now(), "printMetricTypes")
+	met, err := p.plugin.(Collector).GetMetricTypes(conf)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Metric Types include: ")
+	for _, j := range met {
+		fmt.Println("    Type: " + j.Namespace.Element(1).Value)
+	}
+	return met, nil
+}
+func printCollectMetrics(p *pluginProxy, m []Metric) error {
+	defer timeTrack(time.Now(), "printCollectMetrics")
+	cltd, err := p.plugin.(Collector).CollectMetrics(m)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Collected Metrics include: ")
+	for _, j := range cltd {
+		fmt.Printf("    Type: %10T  Value: %v \n", j.Data, j.Data)
+	}
+	return nil
+}
+
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	fmt.Printf("    %s took %s \n\n", name, elapsed)
 }
