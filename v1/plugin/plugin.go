@@ -29,6 +29,10 @@ import (
 	"strconv"
 	"time"
 
+	"log"
+
+	"runtime"
+
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
@@ -317,19 +321,12 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		} else { //implies run diagnostics
 			var c Config
 			if config != "" {
-				fmt.Println("TODO: apply config")
-				fmt.Println("TODO: parse into a Config type")
-				//apply config ?
-				//flag will default config to "" if nothing passed in
-
-				c = Config{
-					"user":       "john",
-					"someint":    1234,
-					"somefloat":  3.14,
-					"somebool":   true,
-					"user2":      "jane",
-					"someint2":   4321,
-					"somefloat2": 4.13,
+				fmt.Println("TODO: apply config?")
+				byteArray := []byte(config)
+				err := json.Unmarshal(byteArray, &c)
+				if err != nil {
+					log.Printf("There was an error when parsing config. Please ensure your config is valid. \n %v", err)
+					return err
 				}
 			}
 
@@ -413,6 +410,9 @@ func showDiagnostics(m meta, p *pluginProxy, c Config) error {
 		fmt.Println("Show VERBOSE diagnostics!")
 	} else {
 		fmt.Println("SHOW DIAGNOSTICS!")
+		//runtime details
+		printRuntimeDetails(m)
+
 		met, err := printMetricTypes(p, c)
 		if err != nil {
 			return err
@@ -424,6 +424,7 @@ func showDiagnostics(m meta, p *pluginProxy, c Config) error {
 		}
 
 	}
+	printContactUs()
 	return nil
 }
 
@@ -431,6 +432,7 @@ func printMetricTypes(p *pluginProxy, conf Config) ([]Metric, error) {
 	defer timeTrack(time.Now(), "printMetricTypes")
 	met, err := p.plugin.(Collector).GetMetricTypes(conf)
 	if err != nil {
+		log.Printf("There was an error in the call to GetMetricTypes. Please provide a config or check that your existing one is valid. \n %v", err)
 		return nil, err
 	}
 	fmt.Println("Metric Types include: ")
@@ -443,6 +445,7 @@ func printCollectMetrics(p *pluginProxy, m []Metric) error {
 	defer timeTrack(time.Now(), "printCollectMetrics")
 	cltd, err := p.plugin.(Collector).CollectMetrics(m)
 	if err != nil {
+		log.Printf("There was an error in the call to CollectMetrics. Please check the output from printMetricTypes is valid. \n %v", err)
 		return err
 	}
 	fmt.Println("Collected Metrics include: ")
@@ -452,7 +455,19 @@ func printCollectMetrics(p *pluginProxy, m []Metric) error {
 	return nil
 }
 
+func printRuntimeDetails(m meta) {
+	defer timeTrack(time.Now(), "printRuntimeDetails")
+	fmt.Printf("Runtime Details:\n    PluginName: %v, Version: %v \n    RPC Type: %v, RPC Version: %v \n", m.Name, m.Version, m.RPCType, m.RPCVersion)
+
+	fmt.Printf("    Operating system: %v \n    Architecture: %v \n    Go version: %v \n", runtime.GOOS, runtime.GOARCH, runtime.Version())
+
+}
+
+func printContactUs() {
+	fmt.Print("Thank you for using this Snap plugin. If you have questions or are running \ninto errors, please contact us on Github (github.com/intelsdi-x/snap) or \nour Slack channel (intelsdi-x.herokuapp.com). \nThe repo for this plugin can be found: github.com/intelsdi-x/___??___. \nWhen submitting a new issues on Github, please include this diagnostics \nprint out so that we have a starting point for addressing your question. \nThank you. \n\n")
+}
+
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	fmt.Printf("    %s took %s \n\n", name, elapsed)
+	fmt.Printf("%s took %s \n\n", name, elapsed)
 }
