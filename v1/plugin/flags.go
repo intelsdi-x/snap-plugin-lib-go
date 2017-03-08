@@ -9,12 +9,6 @@ var (
 		Usage:       "config file to use",
 		Destination: &config,
 	}
-	flVerbose = cli.BoolFlag{
-		Name:        "verbose",
-		Hidden:      false,
-		Usage:       "show verbose diagnostics",
-		Destination: &verbose,
-	}
 	// If no port was provided we let the OS select a port for us.
 	// This is safe as address is returned in the Response and keep
 	// alive prevents unattended plugins.

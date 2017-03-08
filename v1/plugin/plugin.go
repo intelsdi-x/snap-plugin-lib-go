@@ -311,9 +311,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 	app.Name = m.Name
 	app.Version = strconv.Itoa(m.Version)
 	app.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
-	//TODO: optional set description field
-
-	app.Flags = []cli.Flag{flConfig, flVerbose, flPort, flPingTimeout, flPprof}
+	app.Flags = []cli.Flag{flConfig, flPort, flPingTimeout, flPprof}
 
 	app.Action = func(c *cli.Context) error {
 		if c.NArg() > 0 {
@@ -321,12 +319,10 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		} else { //implies run diagnostics
 			var c Config
 			if config != "" {
-				fmt.Println("TODO: apply config?")
 				byteArray := []byte(config)
 				err := json.Unmarshal(byteArray, &c)
 				if err != nil {
-					log.Printf("There was an error when parsing config. Please ensure your config is valid. \n %v", err)
-					return err
+					return fmt.Errorf("There was an error when parsing config. Please ensure your config is valid. \n %v", err)
 				}
 			}
 
@@ -404,67 +400,70 @@ func getPluginType(plType pluginType) string {
 	return ""
 }
 
+// GetPluginType converts a pluginType to a string
+// as described in snap/control/plugin/plugin.go
+func getRPCType(i int) string {
+	if i == 0 {
+		return "NativeRPC (0)"
+	} else if i == 2 {
+		return "GRPC (2)"
+	}
+	return "Not a valid RPCType"
+}
+
 func showDiagnostics(m meta, p *pluginProxy, c Config) error {
 	defer timeTrack(time.Now(), "showDiagnostics")
-	if verbose {
-		fmt.Println("Show VERBOSE diagnostics!")
-	} else {
-		fmt.Println("SHOW DIAGNOSTICS!")
-		//runtime details
-		printRuntimeDetails(m)
+	printRuntimeDetails(m)
+	met := printMetricTypes(p, c)
 
-		met, err := printMetricTypes(p, c)
-		if err != nil {
-			return err
-		}
-
-		err = printCollectMetrics(p, met)
-		if err != nil {
-			return err
-		}
-
-	}
+	printCollectMetrics(p, met)
 	printContactUs()
 	return nil
 }
 
-func printMetricTypes(p *pluginProxy, conf Config) ([]Metric, error) {
+func printMetricTypes(p *pluginProxy, conf Config) []Metric {
 	defer timeTrack(time.Now(), "printMetricTypes")
 	met, err := p.plugin.(Collector).GetMetricTypes(conf)
 	if err != nil {
 		log.Printf("There was an error in the call to GetMetricTypes. Please provide a config or check that your existing one is valid. \n %v", err)
-		return nil, err
+		os.Exit(1)
 	}
-	fmt.Println("Metric Types include: ")
+	//apply any config passed in to met so that
+	//CollectMetrics can see the config for each metric
 	for _, j := range met {
-		fmt.Println("    Type: " + j.Namespace.Element(1).Value)
+		j.Config = conf
 	}
-	return met, nil
+
+	fmt.Println("Metric catalog will be updated to include: ")
+	for _, j := range met {
+		fmt.Printf("    Namespace: %v \n", j.Namespace.String())
+	}
+	return met
 }
-func printCollectMetrics(p *pluginProxy, m []Metric) error {
+
+func printCollectMetrics(p *pluginProxy, m []Metric) {
 	defer timeTrack(time.Now(), "printCollectMetrics")
 	cltd, err := p.plugin.(Collector).CollectMetrics(m)
 	if err != nil {
 		log.Printf("There was an error in the call to CollectMetrics. Please check the output from printMetricTypes is valid. \n %v", err)
-		return err
+		os.Exit(1)
 	}
-	fmt.Println("Collected Metrics include: ")
+	fmt.Println("Metrics that can be collected right now are: ")
 	for _, j := range cltd {
-		fmt.Printf("    Type: %10T  Value: %v \n", j.Data, j.Data)
+		fmt.Printf("    Namespace: %-30v  Value Type: %-10T  Value: %v \n", j.Namespace, j.Data, j.Data)
 	}
-	return nil
 }
 
 func printRuntimeDetails(m meta) {
 	defer timeTrack(time.Now(), "printRuntimeDetails")
-	fmt.Printf("Runtime Details:\n    PluginName: %v, Version: %v \n    RPC Type: %v, RPC Version: %v \n", m.Name, m.Version, m.RPCType, m.RPCVersion)
+	fmt.Printf("Runtime Details:\n    PluginName: %v, Version: %v \n    RPC Type: %v, RPC Version: %v \n", m.Name, m.Version, getRPCType(m.RPCType), m.RPCVersion)
 
 	fmt.Printf("    Operating system: %v \n    Architecture: %v \n    Go version: %v \n", runtime.GOOS, runtime.GOARCH, runtime.Version())
 
 }
 
 func printContactUs() {
-	fmt.Print("Thank you for using this Snap plugin. If you have questions or are running \ninto errors, please contact us on Github (github.com/intelsdi-x/snap) or \nour Slack channel (intelsdi-x.herokuapp.com). \nThe repo for this plugin can be found: github.com/intelsdi-x/___??___. \nWhen submitting a new issues on Github, please include this diagnostics \nprint out so that we have a starting point for addressing your question. \nThank you. \n\n")
+	fmt.Print("Thank you for using this Snap plugin. If you have questions or are running \ninto errors, please contact us on Github (github.com/intelsdi-x/snap) or \nour Slack channel (intelsdi-x.herokuapp.com). \nThe repo for this plugin can be found: github.com/intelsdi-x/___??___. \nWhen submitting a new issue on Github, please include this diagnostic \nprint out so that we have a starting point for addressing your question. \nThank you. \n\n")
 }
 
 func timeTrack(start time.Time, name string) {
