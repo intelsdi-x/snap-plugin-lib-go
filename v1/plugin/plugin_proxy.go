@@ -39,6 +39,8 @@ var (
 	PingTimeoutLimit = 3
 )
 
+type pluginProxyConstructor func(Plugin) *pluginProxy
+
 type pluginProxy struct {
 	plugin              Plugin
 	LastPing            time.Time
@@ -46,7 +48,18 @@ type pluginProxy struct {
 	halt                chan struct{}
 }
 
+// pluginProxyCtor refers to function creating a new plugin proxy instance,
+// should never be exposed or used outside of tests
+var pluginProxyCtor pluginProxyConstructor = defaultPluginProxyCtor
+
+// newPluginProxy delivers a new plugin proxy instance using a constructor
 func newPluginProxy(plugin Plugin) *pluginProxy {
+	return pluginProxyCtor(plugin)
+}
+
+// defaultPluginProxyCtor delivers new plugin instance using default setup
+// (e.g.: default plugin timeout)
+func defaultPluginProxyCtor(plugin Plugin) *pluginProxy {
 	return &pluginProxy{
 		plugin:              plugin,
 		PingTimeoutDuration: PingTimeoutDurationDefault,
