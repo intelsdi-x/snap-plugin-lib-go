@@ -20,12 +20,16 @@ limitations under the License.
 package plugin
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
@@ -78,27 +82,142 @@ type StreamCollector interface {
 	GetMetricTypes(Config) ([]Metric, error)
 }
 
-func StartStreamCollector(plugin StreamCollector, name string, version int, opts ...MetaOpt) int {
-	getArgs()
-	opts = append(opts, rpcType(gRPCStream))
-	m := newMeta(collectorType, name, version, opts...)
-	server := grpc.NewServer()
-	proxy := &StreamProxy{
-		plugin:      plugin,
-		pluginProxy: *newPluginProxy(plugin),
+// tlsServerSetup offers functions supporting TLS server setup
+type tlsServerSetup interface {
+	// makeTLSConfig delivers TLS config suitable to use for plugins, excluding
+	// setup of certificates (either subject or root CA certificates).
+	makeTLSConfig() *tls.Config
+	// readRootCAs is a function that delivers root CA certificates for the purpose
+	// of TLS initialization
+	readRootCAs() (*x509.CertPool, error)
+}
+
+// osInputOutput supports interactions with OS for the plugin lib
+type osInputOutput interface {
+	// readOSArgs gets command line arguments passed to application
+	readOSArgs() []string
+	// printOut outputs given data to application standard output
+	printOut(data string)
+}
+
+// standardInputOutput delivers standard implementation for OS
+// interactions
+type standardInputOutput struct {
+}
+
+// tlsServerDefaultSetup provides default implementation for TLS setup routines
+type tlsServerDefaultSetup struct {
+}
+
+// tlsSetup holds TLS setup utility for plugin lib
+var tlsSetup tlsServerSetup = tlsServerDefaultSetup{}
+
+// libInputOutput holds utility used for OS interactions
+var libInputOutput osInputOutput = standardInputOutput{}
+
+// makeTLSConfig provides TLS configuraton template for plugins
+func (ts tlsServerDefaultSetup) makeTLSConfig() *tls.Config {
+	config := tls.Config{
+		ClientAuth:               tls.RequireAndVerifyClientCert,
+		PreferServerCipherSuites: true,
+		CipherSuites: []uint16{
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		},
 	}
-	rpc.RegisterStreamCollectorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return &config
+}
+
+// readRootCAs delivers a standard source of root CAs from system
+func (ts tlsServerDefaultSetup) readRootCAs() (*x509.CertPool, error) {
+	return x509.SystemCertPool()
+}
+
+// readOSArgs implementation that returns application args passed by OS
+func (io standardInputOutput) readOSArgs() []string {
+	return os.Args
+}
+
+// printOut implementation that emits data into standard output
+func (io standardInputOutput) printOut(data string) {
+	fmt.Println(data)
+}
+
+// makeGRPCCredentials delivers credentials object suitable for setting up gRPC
+// server, with TLS optionally turned on.
+func makeGRPCCredentials(m *meta) (creds credentials.TransportCredentials, err error) {
+	var config *tls.Config
+	if !m.TLSEnabled {
+		config = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	} else {
+		cert, err := tls.LoadX509KeyPair(m.CertPath, m.KeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("unable to setup credentials for plugin - loading key pair failed: %v", err.Error())
+		}
+		config = tlsSetup.makeTLSConfig()
+		config.Certificates = []tls.Certificate{cert}
+		rootCAs, err := tlsSetup.readRootCAs()
+		if err != nil {
+			return nil, fmt.Errorf("unable to read root CAs: %v", err.Error())
+		}
+		config.RootCAs = rootCAs
+	}
+	creds = credentials.NewTLS(config)
+	return creds, nil
+}
+
+// applySecurityArgsToMeta validates plugin runtime arguments from OS, focusing on
+// TLS functionality.
+func applySecurityArgsToMeta(m *meta, args *Arg) error {
+	if !args.TLSEnabled {
+		if args.CertPath != "" || args.KeyPath != "" {
+			return fmt.Errorf("excessive arguments given - CertPath and KeyPath are unused with TLS not enabled")
+		}
+		return nil
+	}
+	if args.CertPath == "" || args.KeyPath == "" {
+		return fmt.Errorf("failed to enable TLS for plugin - need both CertPath and KeyPath")
+	}
+	m.CertPath = args.CertPath
+	m.KeyPath = args.KeyPath
+	m.TLSEnabled = true
+	return nil
+}
+
+// buildGRPCServer configures and builds GRPC server ready to server a plugin
+// instance
+func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
+	args, err := getArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	m = newMeta(typeOfPlugin, name, version, opts...)
+
+	if err := applySecurityArgsToMeta(m, args); err != nil {
+		return nil, nil, err
+	}
+	creds, err := makeGRPCCredentials(m)
+	if err != nil {
+		return nil, nil, err
+	}
+	if m.TLSEnabled {
+		server = grpc.NewServer(grpc.Creds(creds))
+	} else {
+		server = grpc.NewServer()
+	}
+	return server, m, nil
 }
 
 // StartCollector is given a Collector implementation and its metadata,
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt) int {
-	getArgs()
-	m := newMeta(collectorType, name, version, opts...)
-	server := grpc.NewServer()
-	// TODO(danielscottt) SSL
+	server, m, err := buildGRPCServer(collectorType, name, version, opts...)
+	if err != nil {
+		panic(err)
+	}
 	proxy := &collectorProxy{
 		plugin:      plugin,
 		pluginProxy: *newPluginProxy(plugin),
@@ -111,10 +230,10 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt) int {
-	getArgs()
-	m := newMeta(processorType, name, version, opts...)
-	server := grpc.NewServer()
-	// TODO(danielscottt) SSL
+	server, m, err := buildGRPCServer(processorType, name, version, opts...)
+	if err != nil {
+		panic(err)
+	}
 	proxy := &processorProxy{
 		plugin:      plugin,
 		pluginProxy: *newPluginProxy(plugin),
@@ -127,15 +246,31 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt) int {
-	getArgs()
-	m := newMeta(publisherType, name, version, opts...)
-	server := grpc.NewServer()
-	// TODO(danielscottt) SSL
+	server, m, err := buildGRPCServer(publisherType, name, version, opts...)
+	if err != nil {
+		panic(err)
+	}
 	proxy := &publisherProxy{
 		plugin:      plugin,
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterPublisherServer(server, proxy)
+	return startPlugin(server, m, &proxy.pluginProxy)
+}
+
+// StartStreamCollector is given a StreamCollector implementation and its metadata,
+// generates a response for the initial stdin / stdout handshake, and starts
+// the plugin's gRPC server.
+func StartStreamCollector(plugin StreamCollector, name string, version int, opts ...MetaOpt) int {
+	server, m, err := buildGRPCServer(collectorType, name, version, opts...)
+	if err != nil {
+		panic(err)
+	}
+	proxy := &StreamProxy{
+		plugin:      plugin,
+		pluginProxy: *newPluginProxy(plugin),
+	}
+	rpc.RegisterStreamCollectorServer(server, proxy)
 	return startPlugin(server, m, &proxy.pluginProxy)
 }
 
@@ -152,7 +287,7 @@ type preamble struct {
 	ErrorMessage  string
 }
 
-func startPlugin(srv server, m meta, p *pluginProxy) int {
+func startPlugin(srv server, m *meta, p *pluginProxy) int {
 	l, err := net.Listen("tcp", ":"+listenPort)
 	if err != nil {
 		panic("Unable to get open port")
@@ -172,7 +307,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		}
 	}()
 	resp := preamble{
-		Meta:          m,
+		Meta:          *m,
 		ListenAddress: addr,
 		Type:          m.Type,
 		PprofAddress:  pprofPort,
@@ -182,6 +317,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Fprintf(os.Stderr, "echoing preamble: %v\n", string(preambleJSON))
 	fmt.Println(string(preambleJSON))
 	go p.HeartbeatWatch()
 	// TODO(danielscottt): exit code
