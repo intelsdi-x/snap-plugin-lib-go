@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -36,15 +38,24 @@ var (
 )
 
 func TestPlugin(t *testing.T) {
-	Convey("Test Metrics", t, func() {
-		i := StartCollector(newMockCollector(), "collector", 0, Exclusive(true), RoutingStrategy(1))
-		So(i, ShouldEqual, 0)
-
-		j := StartProcessor(newMockProcessor(), "processor", 1, Exclusive(false))
-		So(j, ShouldEqual, 0)
-
-		k := StartPublisher(newMockPublisher(), "publisher", 2, Exclusive(false))
-		So(k, ShouldEqual, 0)
+	Convey("Basing on plugin lib routines", t, func() {
+		oldLibInputOutput := libInputOutput
+		libInputOutput = newMockInputOutput()
+		Convey("collector plugin should start successfully", func() {
+			i := StartCollector(newMockCollector(), "collector", 0, Exclusive(true), RoutingStrategy(1))
+			So(i, ShouldEqual, 0)
+		})
+		Convey("processor plugin should start successfully", func() {
+			j := StartProcessor(newMockProcessor(), "processor", 1, Exclusive(false))
+			So(j, ShouldEqual, 0)
+		})
+		Convey("publisher plugin should start successfully", func() {
+			k := StartPublisher(newMockPublisher(), "publisher", 2, Exclusive(false))
+			So(k, ShouldEqual, 0)
+		})
+		Reset(func() {
+			libInputOutput = oldLibInputOutput
+		})
 	})
 
 }
@@ -59,6 +70,32 @@ func newMockPlugin() *mockPlugin {
 
 func newMockErrPlugin() *mockPlugin {
 	return &mockPlugin{err: errors.New("error")}
+}
+
+type mockInputOutput struct {
+	mockArgs     []string
+	output       []string
+	doReadOSArgs func() []string
+	doPrintOut   func(string)
+}
+
+func (f *mockInputOutput) readOSArgs() []string {
+	return f.doReadOSArgs()
+}
+
+func (f *mockInputOutput) printOut(data string) {
+	f.doPrintOut(data)
+}
+
+func newMockInputOutput() *mockInputOutput {
+	mock := mockInputOutput{mockArgs: strings.Fields("mock {}")}
+	mock.doPrintOut = func(data string) {
+		mock.output = append(mock.output, data)
+	}
+	mock.doReadOSArgs = func() []string {
+		return mock.mockArgs
+	}
+	return &mock
 }
 
 func (mp *mockPlugin) GetConfigPolicy() (ConfigPolicy, error) {
