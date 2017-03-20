@@ -425,14 +425,36 @@ func printMetricTypes(p *pluginProxy, conf Config) []Metric {
 	defer timeTrack(time.Now(), "printMetricTypes")
 	met, err := p.plugin.(Collector).GetMetricTypes(conf)
 	if err != nil {
-		log.Printf("There was an error in the call to GetMetricTypes. Please provide a config or check that your existing one is valid. \n %v", err)
+		log.Printf("There was an error in the call to GetMetricTypes. Please ensure your config contains any required fields mentioned in the error below. \n %v", err)
 		os.Exit(1)
 	}
 	//apply any config passed in to met so that
 	//CollectMetrics can see the config for each metric
 	for _, j := range met {
 		j.Config = conf
+
+		//check to ensure config got put in
+		// for k, v := range j.Config {
+		// 	switch vv := v.(type) {
+		// 	case string:
+		// 		fmt.Println(k, "is string", vv)
+		// 	case int:
+		// 		fmt.Println(k, "is int", vv)
+		// 	case bool:
+		// 		fmt.Println(k, "is a bool", vv)
+		// 	case []interface{}:
+		// 		fmt.Println(k, "is an array:")
+		// 		for i, u := range vv {
+		// 			fmt.Println(i, u)
+		// 		}
+		// 	default:
+		// 		fmt.Println(k, "is of a type I don't know how to handle")
+		// 	}
+		// }
+
 	}
+
+	fmt.Printf("Metric array: %v\n", met)
 
 	fmt.Println("Metric catalog will be updated to include: ")
 	for _, j := range met {
@@ -445,7 +467,7 @@ func printCollectMetrics(p *pluginProxy, m []Metric) {
 	defer timeTrack(time.Now(), "printCollectMetrics")
 	cltd, err := p.plugin.(Collector).CollectMetrics(m)
 	if err != nil {
-		log.Printf("There was an error in the call to CollectMetrics. Please check the output from printMetricTypes is valid. \n %v", err)
+		log.Printf("There was an error in the call to CollectMetrics. Please ensure your config contains any required fields mentioned in the error below.. \n %v", err)
 		os.Exit(1)
 	}
 	fmt.Println("Metrics that can be collected right now are: ")
