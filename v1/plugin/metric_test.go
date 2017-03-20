@@ -165,6 +165,24 @@ func TestMetricTime(t *testing.T) {
 	})
 }
 
+func TestCopyNamespace(t *testing.T) {
+	Convey("Having support for namespace copying", t, func() {
+		Convey("taking simple namespace instance", func() {
+			src := NewNamespace("a", "b", "c")
+			srcStr := src.Strings()
+			dst := CopyNamespace(src)
+			Convey("namespace should be copied exactly", func() {
+				So(dst, ShouldResemble, src)
+			})
+			Convey("copy should use independent storage", func() {
+				second := dst.AddStaticElements("d", "e")
+				So(second, ShouldNotResemble, src)
+				So(src.Strings(), ShouldResemble, srcStr)
+			})
+		})
+	})
+}
+
 type metricInput struct {
 	metrics []Metric
 }

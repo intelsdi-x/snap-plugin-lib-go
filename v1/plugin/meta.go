@@ -108,10 +108,13 @@ type meta struct {
 	Unsecure         bool
 	CacheTTL         time.Duration
 	RoutingStrategy  router
+	CertPath         string
+	KeyPath          string
+	TLSEnabled       bool
 }
 
 // newMeta sets defaults, applies options, and then returns a meta struct
-func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta {
+func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) *meta {
 	p := meta{
 		Name:             name,
 		Version:          version,
@@ -129,5 +132,5 @@ func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) meta 
 		opt(&p)
 	}
 
-	return p
+	return &p
 }

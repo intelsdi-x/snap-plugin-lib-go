@@ -6,10 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"time"
-
 	"net/http/pprof"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -20,7 +18,7 @@ var (
 	pprofPort  = "0"
 )
 
-// Arguments passed to startup of Plugin
+// Arg represents arguments passed to startup of Plugin
 type Arg struct {
 	// Plugin log level, see logrus.Loglevel
 	LogLevel uint8
@@ -32,17 +30,29 @@ type Arg struct {
 
 	// enable pprof
 	Pprof bool
+
+	// Path to TLS certificate file for a TLS server
+	CertPath string
+
+	// Path to TLS private key file for a TLS server
+	KeyPath string
+
+	// Flag requesting server to establish TLS channel
+	TLSEnabled bool
 }
 
 // getArgs returns plugin args or default ones
-func getArgs() error {
+func getArgs() (*Arg, error) {
 	pluginArg := &Arg{}
-	if os.Args[1] == "" {
-		return nil
+	osArgs := libInputOutput.readOSArgs()
+	// default parameters - can be parsed as JSON
+	paramStr := "{}"
+	if len(osArgs) > 1 && osArgs[1] != "" {
+		paramStr = osArgs[1]
 	}
-	err := json.Unmarshal([]byte(os.Args[1]), pluginArg)
+	err := json.Unmarshal([]byte(paramStr), pluginArg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// If no port was provided we let the OS select a port for us.
@@ -57,10 +67,10 @@ func getArgs() error {
 		PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
 	}
 	if pluginArg.Pprof {
-		return getPort()
+		return pluginArg, getPort()
 	}
 
-	return nil
+	return pluginArg, nil
 }
 
 func getPort() error {
