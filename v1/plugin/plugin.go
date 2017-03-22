@@ -27,6 +27,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"log"
@@ -307,13 +308,16 @@ type preamble struct {
 }
 
 func startPlugin(srv server, m meta, p *pluginProxy) int {
-	app := cli.NewApp()
-	app.Name = m.Name
-	app.Version = strconv.Itoa(m.Version)
-	app.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
-	app.Flags = []cli.Flag{flConfig, flPort, flPingTimeout, flPprof}
+	if App == nil {
+		App = cli.NewApp()
+	}
+	App.Name = m.Name
+	App.Version = strconv.Itoa(m.Version)
+	App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
+	App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof}...)
+	// App.Flags = []cli.Flag{flConfig, flPort, flPingTimeout, flPprof}
 
-	app.Action = func(c *cli.Context) error {
+	App.Action = func(c *cli.Context) error {
 		if c.NArg() > 0 {
 			printPreamble(srv, &m, p)
 		} else { //implies run diagnostics
@@ -341,7 +345,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 
 		return nil
 	}
-	app.Run(os.Args)
+	App.Run(os.Args)
 
 	return 0
 }
@@ -414,11 +418,17 @@ func getRPCType(i int) string {
 func showDiagnostics(m meta, p *pluginProxy, c Config) error {
 	defer timeTrack(time.Now(), "showDiagnostics")
 	printRuntimeDetails(m)
+	err := printConfigPolicy(p, c)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	met := printMetricTypes(p, c)
 
 	printCollectMetrics(p, met)
 	printContactUs()
 	return nil
+
 }
 
 func printMetricTypes(p *pluginProxy, conf Config) []Metric {
@@ -430,31 +440,9 @@ func printMetricTypes(p *pluginProxy, conf Config) []Metric {
 	}
 	//apply any config passed in to met so that
 	//CollectMetrics can see the config for each metric
-	for _, j := range met {
-		j.Config = conf
-
-		//check to ensure config got put in
-		// for k, v := range j.Config {
-		// 	switch vv := v.(type) {
-		// 	case string:
-		// 		fmt.Println(k, "is string", vv)
-		// 	case int:
-		// 		fmt.Println(k, "is int", vv)
-		// 	case bool:
-		// 		fmt.Println(k, "is a bool", vv)
-		// 	case []interface{}:
-		// 		fmt.Println(k, "is an array:")
-		// 		for i, u := range vv {
-		// 			fmt.Println(i, u)
-		// 		}
-		// 	default:
-		// 		fmt.Println(k, "is of a type I don't know how to handle")
-		// 	}
-		// }
-
+	for i := range met {
+		met[i].Config = conf
 	}
-
-	fmt.Printf("Metric array: %v\n", met)
 
 	fmt.Println("Metric catalog will be updated to include: ")
 	for _, j := range met {
@@ -463,16 +451,99 @@ func printMetricTypes(p *pluginProxy, conf Config) []Metric {
 	return met
 }
 
+func printConfigPolicy(p *pluginProxy, conf Config) error {
+	defer timeTrack(time.Now(), "printConfigPolicy")
+	requiredConfigs := ""
+	cPolicy, err := p.plugin.(Collector).GetConfigPolicy()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Config Policy:")
+	if len(cPolicy.stringRules) > 0 {
+		for k, v := range cPolicy.stringRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+					//TODO: Check if config values are of correct type
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.integerRules) > 0 {
+		for k, v := range cPolicy.integerRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.floatRules) > 0 {
+		for k, v := range cPolicy.floatRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.boolRules) > 0 {
+		for k, v := range cPolicy.boolRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+
+	if requiredConfigs != "" {
+		requiredConfigs += "! Please provide config in form of: -config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'\n"
+		err := fmt.Errorf(requiredConfigs)
+		return err
+	}
+
+	return nil
+}
+
 func printCollectMetrics(p *pluginProxy, m []Metric) {
 	defer timeTrack(time.Now(), "printCollectMetrics")
 	cltd, err := p.plugin.(Collector).CollectMetrics(m)
 	if err != nil {
-		log.Printf("There was an error in the call to CollectMetrics. Please ensure your config contains any required fields mentioned in the error below.. \n %v", err)
+		log.Printf("There was an error in the call to CollectMetrics. Please ensure your config contains any required fields mentioned in the error below. \n %v", err)
 		os.Exit(1)
 	}
 	fmt.Println("Metrics that can be collected right now are: ")
 	for _, j := range cltd {
-		fmt.Printf("    Namespace: %-30v  Value Type: %-10T  Value: %v \n", j.Namespace, j.Data, j.Data)
+		fmt.Printf("    Namespace: %-30v  Type: %-10T  Value: %v \n", j.Namespace, j.Data, j.Data)
 	}
 }
 
