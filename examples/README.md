@@ -50,9 +50,9 @@ $ glide up
     option -o outputs the binary to the specified name
 
 ```
-$ go build -o example-collector examples/collector/main.go
-$ go build -o example-processor examples/processor/main.go
-$ go build -o example-publisher examples/publisher/main.go
+$ go build -o example-collector examples/snap-plugin-collector-rand/main.go
+$ go build -o example-processor examples/snap-plugin-processor-reverse/main.go
+$ go build -o example-publisher examples/snap-plugin-publisher-file/main.go
 ```
 
 ###4. Run Snap, Load Plugins, and Run Tasks
