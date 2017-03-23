@@ -268,6 +268,7 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartStreamCollector(plugin StreamCollector, name string, version int, opts ...MetaOpt) int {
+	opts = append(opts, rpcType(gRPCStream))
 	server, m, err := buildGRPCServer(collectorType, name, version, opts...)
 	if err != nil {
 		panic(err)
