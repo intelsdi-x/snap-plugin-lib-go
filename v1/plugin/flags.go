@@ -26,7 +26,7 @@ var (
 	flPprof = cli.BoolFlag{
 		Name:        "pprof",
 		Hidden:      false,
-		Usage:       "something about pprof",
+		Usage:       "set pprof",
 		Destination: &Pprof,
 	}
 )
