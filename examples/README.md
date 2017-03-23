@@ -7,10 +7,10 @@ To get these example collector, processor, and publisher plugins to build proper
 
 To test these plugins with Snap, you will need to have [Snap](https://github.com/intelsdi-x/snap) installed, check out these docs for [Snap setup details](https://github.com/intelsdi-x/snap/blob/master/docs/BUILD_AND_TEST.md#getting-started).
 
-###1. Get the plugin library repo:
+### 1. Get the plugin library repo:
 `go get github.com/intelsdi-x/snap-plugin-lib-go/...` will add the repo to your $GOPATH
 
-###2. Go to the snap-plugin-lib-go folder and update to the newest versions of the package with `glide up`:
+### 2. Go to the snap-plugin-lib-go folder and update to the newest versions of the package with `glide up`:
 
 ```
 $ cd snap-plugin-lib-go
@@ -45,7 +45,7 @@ $ glide up
 [INFO]	Project relies on 7 dependencies.
 ```
 
-###3. Build the collector, processor, and/or publisher plugins in the examples folder.
+### 3. Build the collector, processor, and/or publisher plugins in the examples folder.
     Use the `go build` command to generate the example binary files for the collector, processor, and publisher.
     option -o outputs the binary to the specified name
 
@@ -55,7 +55,7 @@ $ go build -o example-processor examples/processor/main.go
 $ go build -o example-publisher examples/publisher/main.go
 ```
 
-###4. Run Snap, Load Plugins, and Run Tasks
+### 4. Run Snap, Load Plugins, and Run Tasks
 You can now try [running Snap](https://github.com/intelsdi-x/snap#running-snap), [loading plugins](https://github.com/intelsdi-x/snap#load-plugins), and [running tasks](https://github.com/intelsdi-x/snap#running-tasks). You'll find a sample task.yml file for these examples at the bottom of this README.md.  
 
 Below are some sample commands to try:
