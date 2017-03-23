@@ -438,7 +438,7 @@ func printMetricTypes(p *pluginProxy, conf Config) ([]Metric, error) {
 	defer timeTrack(time.Now(), "printMetricTypes")
 	met, err := p.plugin.(Collector).GetMetricTypes(conf)
 	if err != nil {
-		return nil, fmt.Errorf("! Error in the call to GetMetricTypes. Please ensure your config contains any required fields mentioned in the error below. \n %v", err)
+		return nil, fmt.Errorf("! Error in the call to GetMetricTypes: \n%v", err)
 	}
 	//apply any config passed in to met so that
 	//CollectMetrics can see the config for each metric
