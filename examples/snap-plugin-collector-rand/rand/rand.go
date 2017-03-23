@@ -27,6 +27,7 @@ import (
 	"errors"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -54,8 +55,20 @@ var (
 	}
 )
 
+var req bool = false
+
 func init() {
 	rand.Seed(42)
+
+	plugin.App = cli.NewApp()
+	plugin.App.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:        "required-config",
+			Hidden:      false,
+			Usage:       "Plugin requires config passed in",
+			Destination: &req,
+		},
+	}
 }
 
 // Mock collector implementation used for testing
@@ -79,7 +92,15 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 		if val, err := mt.Config.GetBool("testbool"); err == nil && val {
 			continue
 		}
-		if mt.Namespace[len(mt.Namespace)-1].Value == "integer" {
+
+		if mt.Namespace[0].Value == "static" {
+			var err error
+			mts[idx].Data, err = mts[idx].Config.GetString("value")
+			if err != nil {
+				return nil, fmt.Errorf("Invalid or missing value field.")
+			}
+			metrics = append(metrics, mts[idx])
+		} else if mt.Namespace[len(mt.Namespace)-1].Value == "integer" {
 			if val, err := mt.Config.GetInt("testint"); err == nil {
 				mts[idx].Data = val
 			} else {
@@ -117,8 +138,15 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 	The metrics returned will be advertised to users who list all the metrics and will become targetable by tasks.
 */
 func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
-	metrics := []plugin.Metric{}
+	if req && len(cfg) < 1 {
+		return nil, fmt.Errorf("! When -required-config is set you must provide a config. Example: -config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'\n")
+	}
+	//Simulate throwing error when dependencies not met
+	if _, ok := cfg["depsReq"]; ok {
+		return nil, fmt.Errorf("! Dependency XX required. Run `make deps` to resolve.")
+	}
 
+	metrics := []plugin.Metric{}
 	vals := []string{"integer", "float", "string"}
 	for _, val := range vals {
 		metric := plugin.Metric{
@@ -127,7 +155,12 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 		}
 		metrics = append(metrics, metric)
 	}
-
+	if req {
+		metrics = append(metrics, plugin.Metric{
+			Namespace: plugin.NewNamespace("static", "string"),
+			Version:   1,
+		})
+	}
 	return metrics, nil
 }
 
@@ -140,6 +173,13 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 */
 func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
+
+	if req {
+		policy.AddNewStringRule([]string{"static", "string"},
+			"value",
+			true,
+		)
+	}
 
 	policy.AddNewIntRule([]string{"random", "integer"},
 		"testint",
