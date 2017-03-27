@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -42,15 +43,18 @@ func TestPlugin(t *testing.T) {
 	Convey("Basing on plugin lib routines", t, func() {
 		var mockInputOutput = newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
+		App = nil
 		Convey("collector plugin should start successfully", func() {
 			i := StartCollector(newMockCollector(), "collector", 0, Exclusive(true), RoutingStrategy(1))
 			So(i, ShouldEqual, 0)
 		})
 		Convey("processor plugin should start successfully", func() {
+			// App = nil
 			j := StartProcessor(newMockProcessor(), "processor", 1, Exclusive(false))
 			So(j, ShouldEqual, 0)
 		})
 		Convey("publisher plugin should start successfully", func() {
+			// App = nil
 			k := StartPublisher(newMockPublisher(), "publisher", 2, Exclusive(false))
 			So(k, ShouldEqual, 0)
 		})
@@ -61,44 +65,18 @@ func TestPlugin(t *testing.T) {
 
 }
 
-func TestParsingArgs(t *testing.T) {
-	Convey("With plugin lib parsing command line arguments", t, func() {
-		mockInputOutput := newMockInputOutput(libInputOutput)
-		libInputOutput = mockInputOutput
-		Convey("invalid JSON will be rejected with an error", func() {
-			mockInputOutput.mockArgs = strings.Fields("main {::invalid::JSON::}")
-			_, err := getArgs()
-			So(err, ShouldNotBeNil)
-		})
-		Convey("ListenPort should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"ListenPort":"4414"}`)
-			args, err := getArgs()
-			So(err, ShouldBeNil)
-			So(args.ListenPort, ShouldEqual, "4414")
-		})
-		Convey("PingTimeoutDuration should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"PingTimeoutDuration":3141}`)
-			args, err := getArgs()
-			So(err, ShouldBeNil)
-			So(args.PingTimeoutDuration, ShouldEqual, 3141)
-		})
-		Reset(func() {
-			libInputOutput = mockInputOutput.prevInputOutput
-		})
-	})
-}
-
 func TestPassingPluginMeta(t *testing.T) {
 	Convey("With plugin lib transferring plugin meta", t, func() {
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
+		App = nil
 		Convey("all meta arguments should be present in plugin response", func() {
 			StartPublisher(newMockPublisher(), "mock-publisher-for-meta", 9, Exclusive(true), ConcurrencyCount(11), RoutingStrategy(StickyRouter), CacheTTL(305*time.Millisecond), rpcType(gRPC))
 			var response preamble
+
 			err := json.Unmarshal([]byte(mockInputOutput.output[0]), &response)
-			if err != nil {
-				panic(err)
-			}
+			log.Errorf("output: %v", mockInputOutput.output)
+			So(err, ShouldBeNil)
 			var actMeta = response.Meta
 			So(actMeta.CacheTTL, ShouldEqual, 305*time.Millisecond)
 			So(actMeta.RoutingStrategy, ShouldEqual, StickyRouter)
@@ -166,10 +144,10 @@ func TestMakeTLSConfig(t *testing.T) {
 	Convey("Being security-aware", t, func() {
 		tlsSetupInstance := &tlsServerDefaultSetup{}
 		Convey("plugin lib should use TLS config requiring verified clients and specific cipher suites", func() {
-			config := tlsSetupInstance.makeTLSConfig()
-			So(config.ClientAuth, ShouldEqual, tls.RequireAndVerifyClientCert)
-			So(config.PreferServerCipherSuites, ShouldEqual, true)
-			So(config.CipherSuites, ShouldNotBeEmpty)
+			configObj := tlsSetupInstance.makeTLSConfig()
+			So(configObj.ClientAuth, ShouldEqual, tls.RequireAndVerifyClientCert)
+			So(configObj.PreferServerCipherSuites, ShouldEqual, true)
+			So(configObj.CipherSuites, ShouldNotBeEmpty)
 		})
 	})
 }

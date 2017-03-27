@@ -6,19 +6,34 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/pprof"
 	"time"
+
+	"net/http/pprof"
 
 	"github.com/julienschmidt/httprouter"
 )
 
 var (
-	listenPort = "0"
-	LogLevel   = uint8(2)
-	pprofPort  = "0"
+	//listenPort = "0"
+	//LogLevel   = uint8(2)
+	pprofPort = "0"
+	//Pprof      = false
+	configIn = ""
+	//TLS      = false
+	//certPath   = ""
+	//keyPath    = ""
+	arg = Arg{
+		LogLevel:            uint8(2),
+		PingTimeoutDuration: PingTimeoutDurationDefault,
+		ListenPort:          "0",
+		Pprof:               false,
+		CertPath:            "",
+		KeyPath:             "",
+		TLSEnabled:          false,
+	}
 )
 
-// Arg represents arguments passed to startup of Plugin
+// // Arg represents arguments passed to startup of Plugin
 type Arg struct {
 	// Plugin log level, see logrus.Loglevel
 	LogLevel uint8
@@ -41,36 +56,36 @@ type Arg struct {
 	TLSEnabled bool
 }
 
-// getArgs returns plugin args or default ones
+// // getArgs returns plugin args or default ones
 func getArgs() (*Arg, error) {
-	pluginArg := &Arg{}
+	//pluginArg := &Arg{}
 	osArgs := libInputOutput.readOSArgs()
 	// default parameters - can be parsed as JSON
 	paramStr := "{}"
 	if len(osArgs) > 1 && osArgs[1] != "" {
 		paramStr = osArgs[1]
 	}
-	err := json.Unmarshal([]byte(paramStr), pluginArg)
-	if err != nil {
-		return nil, err
+	json.Unmarshal([]byte(paramStr), arg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// // If no port was provided we let the OS select a port for us.
+	// // This is safe as address is returned in the Response and keep
+	// // alive prevents unattended plugins.
+	// if pluginArg.ListenPort != "" {
+	// 	listenPort = pluginArg.ListenPort
+	// }
+
+	// // If PingTimeoutDuration was provided we set it
+	// if pluginArg.PingTimeoutDuration != 0 {
+	// 	PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
+	// }
+	if arg.Pprof {
+		return &arg, getPort()
 	}
 
-	// If no port was provided we let the OS select a port for us.
-	// This is safe as address is returned in the Response and keep
-	// alive prevents unattended plugins.
-	if pluginArg.ListenPort != "" {
-		listenPort = pluginArg.ListenPort
-	}
-
-	// If PingTimeoutDuration was provided we set it
-	if pluginArg.PingTimeoutDuration != 0 {
-		PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
-	}
-	if pluginArg.Pprof {
-		return pluginArg, getPort()
-	}
-
-	return pluginArg, nil
+	return &arg, nil
 }
 
 func getPort() error {
