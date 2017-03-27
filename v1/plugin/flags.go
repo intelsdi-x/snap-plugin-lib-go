@@ -15,34 +15,34 @@ var (
 	flPort = cli.StringFlag{
 		Name:        "port",
 		Usage:       "port to listen on",
-		Destination: &listenPort,
+		Destination: &arg.ListenPort,
 	}
 	// If PingTimeoutDuration was provided we set it
 	flPingTimeout = cli.DurationFlag{
 		Name:        "pingTimeout",
 		Usage:       "how much time must elapse before a lack of Ping results in a timeout",
-		Destination: &PingTimeoutDurationDefault,
+		Destination: &arg.PingTimeoutDuration,
 	}
 	flPprof = cli.BoolFlag{
 		Name:        "pprof",
 		Hidden:      false,
 		Usage:       "set pprof",
-		Destination: &Pprof,
+		Destination: &arg.Pprof,
 	}
 	flTLS = cli.BoolFlag{
 		Name:        "tls",
 		Hidden:      false,
 		Usage:       "enable TLS",
-		Destination: &TLS,
+		Destination: &arg.TLSEnabled,
 	}
 	flCertPath = cli.StringFlag{
 		Name:        "certPath",
 		Usage:       "necessary to provide when TLS enabled",
-		Destination: &certPath,
+		Destination: &arg.CertPath,
 	}
 	flKeyPath = cli.StringFlag{
 		Name:        "keyPath",
 		Usage:       "necessary to provide when TLS enabled",
-		Destination: &keyPath,
+		Destination: &arg.KeyPath,
 	}
 )

@@ -204,11 +204,11 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 // buildGRPCServer configures and builds GRPC server ready to server a plugin
 // instance
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
-	args, err := getArgs()
-	if err != nil {
-		fmt.Println("ERROR 1")
-		return nil, nil, err
-	}
+	args, _ := getArgs()
+	// if err != nil {
+	// 	fmt.Println("ERROR 1")
+	// 	return nil, nil, err
+	// }
 	m = newMeta(typeOfPlugin, name, version, opts...)
 
 	if err := applySecurityArgsToMeta(m, args); err != nil {
@@ -339,7 +339,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 					fmt.Println("Diagnostics not currently available for publisher plugins.")
 				}
 			}
-			if Pprof {
+			if arg.Pprof {
 				return getPort()
 			}
 
@@ -352,7 +352,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 }
 
 func printPreamble(srv server, m *meta, p *pluginProxy) error {
-	l, err := net.Listen("tcp", ":"+listenPort)
+	l, err := net.Listen("tcp", ":"+arg.ListenPort)
 	if err != nil {
 		panic("Unable to get open port")
 	}
