@@ -128,7 +128,7 @@ var libInputOutput osInputOutput = standardInputOutput{}
 // makeTLSConfig provides TLS configuraton template for plugins, setting
 // required verification of client cert and preferred server suites.
 func (ts tlsServerDefaultSetup) makeTLSConfig() *tls.Config {
-	config := tls.Config{
+	config2 := tls.Config{
 		ClientAuth:               tls.RequireAndVerifyClientCert,
 		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
@@ -136,7 +136,7 @@ func (ts tlsServerDefaultSetup) makeTLSConfig() *tls.Config {
 			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 		},
 	}
-	return &config
+	return &config2
 }
 
 // readRootCAs delivers a standard source of root CAs from system
@@ -162,9 +162,9 @@ func (io standardInputOutput) printOut(data string) {
 // makeGRPCCredentials delivers credentials object suitable for setting up gRPC
 // server, with TLS optionally turned on.
 func makeGRPCCredentials(m *meta) (creds credentials.TransportCredentials, err error) {
-	var config *tls.Config
+	var config2 *tls.Config
 	if !m.TLSEnabled {
-		config = &tls.Config{
+		config2 = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	} else {
@@ -172,30 +172,30 @@ func makeGRPCCredentials(m *meta) (creds credentials.TransportCredentials, err e
 		if err != nil {
 			return nil, fmt.Errorf("unable to setup credentials for plugin - loading key pair failed: %v", err.Error())
 		}
-		config = tlsSetup.makeTLSConfig()
-		config.Certificates = []tls.Certificate{cert}
-		if config.RootCAs, err = tlsSetup.readRootCAs(); err != nil {
+		config2 = tlsSetup.makeTLSConfig()
+		config2.Certificates = []tls.Certificate{cert}
+		if config2.RootCAs, err = tlsSetup.readRootCAs(); err != nil {
 			return nil, fmt.Errorf("unable to read root CAs: %v", err.Error())
 		}
 	}
-	creds = credentials.NewTLS(config)
+	creds = credentials.NewTLS(config2)
 	return creds, nil
 }
 
 // applySecurityArgsToMeta validates plugin runtime arguments from OS, focusing on
 // TLS functionality.
-func applySecurityArgsToMeta(m *meta, args *Arg) error {
-	if !args.TLSEnabled {
-		if args.CertPath != "" || args.KeyPath != "" {
+func applySecurityArgsToMeta(m *meta) error {
+	if !TLS {
+		if certPath != "" || keyPath != "" {
 			return fmt.Errorf("excessive arguments given - CertPath and KeyPath are unused with TLS not enabled")
 		}
 		return nil
 	}
-	if args.CertPath == "" || args.KeyPath == "" {
+	if certPath == "" || keyPath == "" {
 		return fmt.Errorf("failed to enable TLS for plugin - need both CertPath and KeyPath")
 	}
-	m.CertPath = args.CertPath
-	m.KeyPath = args.KeyPath
+	m.CertPath = certPath
+	m.KeyPath = keyPath
 	m.TLSEnabled = true
 	return nil
 }
@@ -203,14 +203,14 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 // buildGRPCServer configures and builds GRPC server ready to server a plugin
 // instance
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
-	args, err := getArgs()
-	if err != nil {
-		fmt.Println("ERROR 1")
-		return nil, nil, err
-	}
+	// args, err := getArgs()
+	// if err != nil {
+	// 	fmt.Println("ERROR 1")
+	// 	return nil, nil, err
+	// }
 	m = newMeta(typeOfPlugin, name, version, opts...)
 
-	if err := applySecurityArgsToMeta(m, args); err != nil {
+	if err := applySecurityArgsToMeta(m); err != nil {
 		fmt.Println("ERROR 2")
 		return nil, nil, err
 	}
@@ -312,15 +312,15 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 	App.Name = m.Name
 	App.Version = strconv.Itoa(m.Version)
 	App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
-	App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof}...)
+	App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath}...)
 	App.Action = func(c *cli.Context) error {
 		if c.NArg() > 0 {
 			printPreamble(srv, &m, p)
 		} else { //implies run diagnostics
 			var c Config
-			if config != "" {
+			if configIn != "" {
 				//byteArray := []byte(config)
-				err := json.Unmarshal([]byte(config), &c)
+				err := json.Unmarshal([]byte(configIn), &c)
 				if err != nil {
 					return fmt.Errorf("! Error when parsing config. Please ensure your config is valid. \n %v", err)
 				}

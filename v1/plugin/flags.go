@@ -4,10 +4,10 @@ import "github.com/urfave/cli"
 
 var (
 	flConfig = cli.StringFlag{
-		Name:        "config",
+		Name:        "configInput",
 		Value:       "",
 		Usage:       "config file to use",
-		Destination: &config,
+		Destination: &configIn,
 	}
 	// If no port was provided we let the OS select a port for us.
 	// This is safe as address is returned in the Response and keep
@@ -28,5 +28,21 @@ var (
 		Hidden:      false,
 		Usage:       "set pprof",
 		Destination: &Pprof,
+	}
+	flTLS = cli.BoolFlag{
+		Name:        "tls",
+		Hidden:      false,
+		Usage:       "enable TLS",
+		Destination: &TLS,
+	}
+	flCertPath = cli.StringFlag{
+		Name:        "certPath",
+		Usage:       "necessary to provide when TLS enabled",
+		Destination: &certPath,
+	}
+	flKeyPath = cli.StringFlag{
+		Name:        "keyPath",
+		Usage:       "necessary to provide when TLS enabled",
+		Destination: &keyPath,
 	}
 )

@@ -40,7 +40,7 @@ func TestConfig(t *testing.T) {
 		"k": true,
 	}
 
-	config := mockConfig{config: data}
+	config2 := mockConfig{config: data}
 
 	var result interface{}
 	var err error
@@ -51,13 +51,13 @@ func TestConfig(t *testing.T) {
 			Convey(fmt.Sprintf("Test Config Case %+v", c.input), func() {
 				switch c.expected.(type) {
 				case bool:
-					result, err = config.config.GetBool(c.input)
+					result, err = config2.config.GetBool(c.input)
 				case float64:
-					result, err = config.config.GetFloat(c.input)
+					result, err = config2.config.GetFloat(c.input)
 				case string:
-					result, err = config.config.GetString(c.input)
+					result, err = config2.config.GetString(c.input)
 				case int64:
-					result, err = config.config.GetInt(c.input)
+					result, err = config2.config.GetInt(c.input)
 				}
 				So(err, ShouldBeNil)
 				So(result, ShouldEqual, c.expected)
@@ -71,13 +71,13 @@ func TestConfig(t *testing.T) {
 			Convey(fmt.Sprintf("Test Config Case %+v", c.input), func() {
 				switch c.expected.(type) {
 				case bool:
-					result, err = config.config.GetBool(c.input)
+					result, err = config2.config.GetBool(c.input)
 				case float64:
-					result, err = config.config.GetFloat(c.input)
+					result, err = config2.config.GetFloat(c.input)
 				case string:
-					result, err = config.config.GetString(c.input)
+					result, err = config2.config.GetString(c.input)
 				case int64:
-					result, err = config.config.GetInt(c.input)
+					result, err = config2.config.GetInt(c.input)
 				}
 				So(err, ShouldNotBeNil)
 			})

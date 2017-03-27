@@ -42,15 +42,18 @@ func TestPlugin(t *testing.T) {
 	Convey("Basing on plugin lib routines", t, func() {
 		var mockInputOutput = newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
+		App = nil
 		Convey("collector plugin should start successfully", func() {
 			i := StartCollector(newMockCollector(), "collector", 0, Exclusive(true), RoutingStrategy(1))
 			So(i, ShouldEqual, 0)
 		})
 		Convey("processor plugin should start successfully", func() {
+			// App = nil
 			j := StartProcessor(newMockProcessor(), "processor", 1, Exclusive(false))
 			So(j, ShouldEqual, 0)
 		})
 		Convey("publisher plugin should start successfully", func() {
+			// App = nil
 			k := StartPublisher(newMockPublisher(), "publisher", 2, Exclusive(false))
 			So(k, ShouldEqual, 0)
 		})
@@ -61,37 +64,11 @@ func TestPlugin(t *testing.T) {
 
 }
 
-func TestParsingArgs(t *testing.T) {
-	Convey("With plugin lib parsing command line arguments", t, func() {
-		mockInputOutput := newMockInputOutput(libInputOutput)
-		libInputOutput = mockInputOutput
-		Convey("invalid JSON will be rejected with an error", func() {
-			mockInputOutput.mockArgs = strings.Fields("main {::invalid::JSON::}")
-			_, err := getArgs()
-			So(err, ShouldNotBeNil)
-		})
-		Convey("ListenPort should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"ListenPort":"4414"}`)
-			args, err := getArgs()
-			So(err, ShouldBeNil)
-			So(args.ListenPort, ShouldEqual, "4414")
-		})
-		Convey("PingTimeoutDuration should be properly parsed", func() {
-			mockInputOutput.mockArgs = strings.Fields(`main {"PingTimeoutDuration":3141}`)
-			args, err := getArgs()
-			So(err, ShouldBeNil)
-			So(args.PingTimeoutDuration, ShouldEqual, 3141)
-		})
-		Reset(func() {
-			libInputOutput = mockInputOutput.prevInputOutput
-		})
-	})
-}
-
 func TestPassingPluginMeta(t *testing.T) {
 	Convey("With plugin lib transferring plugin meta", t, func() {
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
+		// App = nil
 		Convey("all meta arguments should be present in plugin response", func() {
 			StartPublisher(newMockPublisher(), "mock-publisher-for-meta", 9, Exclusive(true), ConcurrencyCount(11), RoutingStrategy(StickyRouter), CacheTTL(305*time.Millisecond), rpcType(gRPC))
 			var response preamble
@@ -118,45 +95,52 @@ func TestPassingPluginMeta(t *testing.T) {
 func TestApplySecurityArgsToMeta(t *testing.T) {
 	Convey("With plugin lib accepting security args", t, func() {
 		m := newMeta(processorType, "test-processor", 3)
-		args := &Arg{}
 		Convey("paths to certificate and key files should be properly passed to plugin meta", func() {
-			args.CertPath = "some-cert-path"
-			args.KeyPath = "some-key-path"
-			args.TLSEnabled = true
-			err := applySecurityArgsToMeta(m, args)
+			certPath = "some-cert-path"
+			keyPath = "some-key-path"
+			TLS = true
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldBeNil)
 			So(m.CertPath, ShouldEqual, "some-cert-path")
 			So(m.KeyPath, ShouldEqual, "some-key-path")
 			So(m.TLSEnabled, ShouldEqual, true)
 		})
 		Convey("paths to certificate and key files must not be set if TLS is not enabled", func() {
-			args.TLSEnabled = false
-			err := applySecurityArgsToMeta(m, args)
+			certPath = ""
+			keyPath = ""
+			TLS = false
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldBeNil)
 			So(m.CertPath, ShouldEqual, "")
 			So(m.KeyPath, ShouldEqual, "")
 			So(m.TLSEnabled, ShouldEqual, false)
 		})
 		Convey("paths to certificate file should be allowed only when TLS is enabled with a flag", func() {
-			args.CertPath = "some-cert-path"
-			err := applySecurityArgsToMeta(m, args)
+			keyPath = ""
+			TLS = false
+			certPath = "some-cert-path"
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("paths to key file should be allowed only when TLS is enabled with a flag", func() {
-			args.KeyPath = "some-key-path"
-			err := applySecurityArgsToMeta(m, args)
+			certPath = ""
+			TLS = false
+			keyPath = "some-key-path"
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("enabling TLS with a flag without certificate path is an error", func() {
-			args.KeyPath = "some-key-path"
-			args.TLSEnabled = true
-			err := applySecurityArgsToMeta(m, args)
+			certPath = ""
+			keyPath = "some-key-path"
+			TLS = true
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("enabling TLS with a flag without key path is an error", func() {
-			args.CertPath = "some-cert-path"
-			args.TLSEnabled = true
-			err := applySecurityArgsToMeta(m, args)
+			keyPath = ""
+			certPath = "some-cert-path"
+			TLS = true
+			err := applySecurityArgsToMeta(m)
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -166,10 +150,10 @@ func TestMakeTLSConfig(t *testing.T) {
 	Convey("Being security-aware", t, func() {
 		tlsSetupInstance := &tlsServerDefaultSetup{}
 		Convey("plugin lib should use TLS config requiring verified clients and specific cipher suites", func() {
-			config := tlsSetupInstance.makeTLSConfig()
-			So(config.ClientAuth, ShouldEqual, tls.RequireAndVerifyClientCert)
-			So(config.PreferServerCipherSuites, ShouldEqual, true)
-			So(config.CipherSuites, ShouldNotBeEmpty)
+			configObj := tlsSetupInstance.makeTLSConfig()
+			So(configObj.ClientAuth, ShouldEqual, tls.RequireAndVerifyClientCert)
+			So(configObj.PreferServerCipherSuites, ShouldEqual, true)
+			So(configObj.CipherSuites, ShouldNotBeEmpty)
 		})
 	})
 }
@@ -204,6 +188,7 @@ func (f *mockInputOutput) printOut(data string) {
 
 func newMockInputOutput(prevInputOutput osInputOutput) *mockInputOutput {
 	mock := mockInputOutput{mockArgs: strings.Fields("mock {}")}
+	mock.output = []string{"asdf"}
 	mock.prevInputOutput = prevInputOutput
 	mock.doPrintOut = func(data string) {
 		mock.output = append(mock.output, data)
