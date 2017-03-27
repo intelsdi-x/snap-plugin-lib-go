@@ -185,18 +185,18 @@ func makeGRPCCredentials(m *meta) (creds credentials.TransportCredentials, err e
 
 // applySecurityArgsToMeta validates plugin runtime arguments from OS, focusing on
 // TLS functionality.
-func applySecurityArgsToMeta(m *meta) error {
-	if !TLS {
-		if certPath != "" || keyPath != "" {
+func applySecurityArgsToMeta(m *meta, args *Arg) error {
+	if !args.TLSEnabled {
+		if args.CertPath != "" || args.KeyPath != "" {
 			return fmt.Errorf("excessive arguments given - CertPath and KeyPath are unused with TLS not enabled")
 		}
 		return nil
 	}
-	if certPath == "" || keyPath == "" {
+	if args.CertPath == "" || args.KeyPath == "" {
 		return fmt.Errorf("failed to enable TLS for plugin - need both CertPath and KeyPath")
 	}
-	m.CertPath = certPath
-	m.KeyPath = keyPath
+	m.CertPath = args.CertPath
+	m.KeyPath = args.KeyPath
 	m.TLSEnabled = true
 	return nil
 }
@@ -204,14 +204,14 @@ func applySecurityArgsToMeta(m *meta) error {
 // buildGRPCServer configures and builds GRPC server ready to server a plugin
 // instance
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
-	// args, err := getArgs()
-	// if err != nil {
-	// 	fmt.Println("ERROR 1")
-	// 	return nil, nil, err
-	// }
+	args, err := getArgs()
+	if err != nil {
+		fmt.Println("ERROR 1")
+		return nil, nil, err
+	}
 	m = newMeta(typeOfPlugin, name, version, opts...)
 
-	if err := applySecurityArgsToMeta(m); err != nil {
+	if err := applySecurityArgsToMeta(m, args); err != nil {
 		fmt.Println("ERROR 2")
 		return nil, nil, err
 	}

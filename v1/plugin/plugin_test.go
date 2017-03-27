@@ -96,52 +96,45 @@ func TestPassingPluginMeta(t *testing.T) {
 func TestApplySecurityArgsToMeta(t *testing.T) {
 	Convey("With plugin lib accepting security args", t, func() {
 		m := newMeta(processorType, "test-processor", 3)
+		args := &Arg{}
 		Convey("paths to certificate and key files should be properly passed to plugin meta", func() {
-			certPath = "some-cert-path"
-			keyPath = "some-key-path"
-			TLS = true
-			err := applySecurityArgsToMeta(m)
+			args.CertPath = "some-cert-path"
+			args.KeyPath = "some-key-path"
+			args.TLSEnabled = true
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldBeNil)
 			So(m.CertPath, ShouldEqual, "some-cert-path")
 			So(m.KeyPath, ShouldEqual, "some-key-path")
 			So(m.TLSEnabled, ShouldEqual, true)
 		})
 		Convey("paths to certificate and key files must not be set if TLS is not enabled", func() {
-			certPath = ""
-			keyPath = ""
-			TLS = false
-			err := applySecurityArgsToMeta(m)
+			args.TLSEnabled = false
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldBeNil)
 			So(m.CertPath, ShouldEqual, "")
 			So(m.KeyPath, ShouldEqual, "")
 			So(m.TLSEnabled, ShouldEqual, false)
 		})
 		Convey("paths to certificate file should be allowed only when TLS is enabled with a flag", func() {
-			keyPath = ""
-			TLS = false
-			certPath = "some-cert-path"
-			err := applySecurityArgsToMeta(m)
+			args.CertPath = "some-cert-path"
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("paths to key file should be allowed only when TLS is enabled with a flag", func() {
-			certPath = ""
-			TLS = false
-			keyPath = "some-key-path"
-			err := applySecurityArgsToMeta(m)
+			args.KeyPath = "some-key-path"
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("enabling TLS with a flag without certificate path is an error", func() {
-			certPath = ""
-			keyPath = "some-key-path"
-			TLS = true
-			err := applySecurityArgsToMeta(m)
+			args.KeyPath = "some-key-path"
+			args.TLSEnabled = true
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("enabling TLS with a flag without key path is an error", func() {
-			keyPath = ""
-			certPath = "some-cert-path"
-			TLS = true
-			err := applySecurityArgsToMeta(m)
+			args.CertPath = "some-cert-path"
+			args.TLSEnabled = true
+			err := applySecurityArgsToMeta(m, args)
 			So(err, ShouldNotBeNil)
 		})
 	})
