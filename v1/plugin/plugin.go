@@ -23,6 +23,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -306,42 +307,46 @@ type preamble struct {
 }
 
 func startPlugin(srv server, m meta, p *pluginProxy) int {
-	if App == nil {
-		App = cli.NewApp()
-	}
-	App.Name = m.Name
-	App.Version = strconv.Itoa(m.Version)
-	App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
-	App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath}...)
-	App.Action = func(c *cli.Context) error {
-		if c.NArg() > 0 {
-			printPreamble(srv, &m, p)
-		} else { //implies run diagnostics
-			var c Config
-			if configIn != "" {
-				//byteArray := []byte(config)
-				err := json.Unmarshal([]byte(configIn), &c)
-				if err != nil {
-					return fmt.Errorf("! Error when parsing config. Please ensure your config is valid. \n %v", err)
+	if flag.Lookup("test.v") != nil {
+		printPreamble(srv, &m, p)
+	} else {
+		if App == nil {
+			App = cli.NewApp()
+		}
+		App.Name = m.Name
+		App.Version = strconv.Itoa(m.Version)
+		App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
+		App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath}...)
+		App.Action = func(c *cli.Context) error {
+			if c.NArg() > 0 {
+				printPreamble(srv, &m, p)
+			} else { //implies run diagnostics
+				var c Config
+				if configIn != "" {
+					//byteArray := []byte(config)
+					err := json.Unmarshal([]byte(configIn), &c)
+					if err != nil {
+						return fmt.Errorf("! Error when parsing config. Please ensure your config is valid. \n %v", err)
+					}
+				}
+
+				switch p.plugin.(type) {
+				case Collector:
+					showDiagnostics(m, p, c)
+				case Processor:
+					fmt.Println("Diagnostics not currently available for processor plugins.")
+				case Publisher:
+					fmt.Println("Diagnostics not currently available for publisher plugins.")
 				}
 			}
-
-			switch p.plugin.(type) {
-			case Collector:
-				showDiagnostics(m, p, c)
-			case Processor:
-				fmt.Println("Diagnostics not currently available for processor plugins.")
-			case Publisher:
-				fmt.Println("Diagnostics not currently available for publisher plugins.")
+			if Pprof {
+				return getPort()
 			}
-		}
-		if Pprof {
-			return getPort()
-		}
 
-		return nil
+			return nil
+		}
+		App.Run(os.Args)
 	}
-	App.Run(os.Args)
 
 	return 0
 }

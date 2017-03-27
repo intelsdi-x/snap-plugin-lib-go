@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -68,14 +69,14 @@ func TestPassingPluginMeta(t *testing.T) {
 	Convey("With plugin lib transferring plugin meta", t, func() {
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
-		// App = nil
+		App = nil
 		Convey("all meta arguments should be present in plugin response", func() {
 			StartPublisher(newMockPublisher(), "mock-publisher-for-meta", 9, Exclusive(true), ConcurrencyCount(11), RoutingStrategy(StickyRouter), CacheTTL(305*time.Millisecond), rpcType(gRPC))
 			var response preamble
+
 			err := json.Unmarshal([]byte(mockInputOutput.output[0]), &response)
-			if err != nil {
-				panic(err)
-			}
+			log.Errorf("output: %v", mockInputOutput.output)
+			So(err, ShouldBeNil)
 			var actMeta = response.Meta
 			So(actMeta.CacheTTL, ShouldEqual, 305*time.Millisecond)
 			So(actMeta.RoutingStrategy, ShouldEqual, StickyRouter)
@@ -188,7 +189,6 @@ func (f *mockInputOutput) printOut(data string) {
 
 func newMockInputOutput(prevInputOutput osInputOutput) *mockInputOutput {
 	mock := mockInputOutput{mockArgs: strings.Fields("mock {}")}
-	mock.output = []string{"asdf"}
 	mock.prevInputOutput = prevInputOutput
 	mock.doPrintOut = func(data string) {
 		mock.output = append(mock.output, data)
