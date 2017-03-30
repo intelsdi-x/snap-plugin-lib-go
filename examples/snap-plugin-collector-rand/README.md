@@ -140,3 +140,15 @@ package rand
 You've made a plugin! Now it's time to share it. Create a release by following these [steps](https://help.github.com/articles/creating-releases/). We recommend that your release version match your plugin version, see example [here](https://github.com/intelsdi-x/snap-plugin-lib-go/blob/master/examples/snap-plugin-collector-rand/main.go#L29).
 
 Don't forget to announce your plugin release on [slack](https://intelsdi-x.herokuapp.com/) and get your plugin added to the [Plugin Catalog](https://github.com/intelsdi-x/snap/blob/master/docs/PLUGIN_CATALOG.md)!
+
+## Notice
+This plugin is also used for testing snap-plugin-lib-go. For that reason, we have added some additional capabilities to it for testing the following situations:
+- mock situation when a plugin requires a config to load
+  - **How to test:**
+When running plugin set the `-required-config` flag. Ex: `./snap-plugin-collector-rand -required-config`
+When this is set, the plugin will expect you to pass in a config item with the key `value`. If you don't pass in a config item or if that config doesn't contain the `value` key, an error will be thrown saying missing config item. Example: `./snap-plugin-collector-rand -required-config -config '{"value":"something"}'`
+
+- mock situation when a plugin does not have required dependencies
+  - **How to test:**
+When running the plugin, pass the `depsReq` key in through the config. Example: `./snap-plugin-collector-rand -required-config -config '{"depsReq":true}'`
+This will always throw an error, as it is simply testing how the plugin-lib handles the error when thrown. 

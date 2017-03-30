@@ -60,6 +60,10 @@ var req bool = false
 func init() {
 	rand.Seed(42)
 
+	//The required-config flag is added for testing plugin-lib-go.
+	//When the flag is set, an additional policy will be added in GetConfigPolicy().
+	//This additional policy has a required field. This simulates
+	//the situation when a plugin requires a config to load.
 	plugin.App = cli.NewApp()
 	plugin.App.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -97,7 +101,7 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 			var err error
 			mts[idx].Data, err = mts[idx].Config.GetString("value")
 			if err != nil {
-				return nil, fmt.Errorf("Invalid or missing value field.")
+				return nil, fmt.Errorf("Invalid or missing value key.")
 			}
 			metrics = append(metrics, mts[idx])
 		} else if mt.Namespace[len(mt.Namespace)-1].Value == "integer" {
@@ -138,6 +142,7 @@ func (RandCollector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 	The metrics returned will be advertised to users who list all the metrics and will become targetable by tasks.
 */
 func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
+	//Simulate throwing error when a config is requried but not passed in
 	if req && len(cfg) < 1 {
 		return nil, fmt.Errorf("! When -required-config is set you must provide a config. Example: -config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'\n")
 	}
@@ -174,6 +179,7 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	policy := plugin.NewConfigPolicy()
 
+	//The required-config flag is used for testing plugin-lib-go
 	if req {
 		policy.AddNewStringRule([]string{"static", "string"},
 			"value",
