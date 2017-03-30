@@ -6,20 +6,25 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"net/http/pprof"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
 
 var (
-	listenPort = "0"
-	LogLevel   = uint8(2)
-	pprofPort  = "0"
-	Pprof      = false
-	config     string
-	verbose    bool
+	pprofPort = "0"
+	configIn  = ""
+	arg       = Arg{
+		LogLevel:            uint8(2),
+		PingTimeoutDuration: PingTimeoutDurationDefault,
+		ListenPort:          "0",
+		Pprof:               false,
+		CertPath:            "",
+		KeyPath:             "",
+		TLSEnabled:          false,
+	}
 )
 
 // Arg represents arguments passed to startup of Plugin
@@ -47,34 +52,18 @@ type Arg struct {
 
 // getArgs returns plugin args or default ones
 func getArgs() (*Arg, error) {
-	pluginArg := &Arg{}
 	osArgs := libInputOutput.readOSArgs()
 	// default parameters - can be parsed as JSON
 	paramStr := "{}"
 	if len(osArgs) > 1 && osArgs[1] != "" {
 		paramStr = osArgs[1]
 	}
-	err := json.Unmarshal([]byte(paramStr), pluginArg)
-	if err != nil {
-		return nil, err
+	json.Unmarshal([]byte(paramStr), &arg)
+	if arg.Pprof {
+		return &arg, getPort()
 	}
 
-	// If no port was provided we let the OS select a port for us.
-	// This is safe as address is returned in the Response and keep
-	// alive prevents unattended plugins.
-	if pluginArg.ListenPort != "" {
-		listenPort = pluginArg.ListenPort
-	}
-
-	// If PingTimeoutDuration was provided we set it
-	if pluginArg.PingTimeoutDuration != 0 {
-		PingTimeoutDurationDefault = pluginArg.PingTimeoutDuration
-	}
-	if pluginArg.Pprof {
-		return pluginArg, getPort()
-	}
-
-	return pluginArg, nil
+	return &arg, nil
 }
 
 func getPort() error {
