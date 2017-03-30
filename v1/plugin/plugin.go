@@ -206,18 +206,15 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
 	args, err := getArgs()
 	if err != nil {
-		fmt.Println("ERROR 1")
 		return nil, nil, err
 	}
 	m = newMeta(typeOfPlugin, name, version, opts...)
 
 	if err := applySecurityArgsToMeta(m, args); err != nil {
-		fmt.Println("ERROR 2")
 		return nil, nil, err
 	}
 	creds, err := makeGRPCCredentials(m)
 	if err != nil {
-		fmt.Println("ERROR 3")
 		return nil, nil, err
 	}
 	if m.TLSEnabled {
@@ -404,7 +401,7 @@ func getPluginType(plType pluginType) string {
 	return ""
 }
 
-// GetPluginType converts a pluginType to a string
+// GetRPCType converts a RPCType (int) to a string
 // as described in snap/control/plugin/plugin.go
 func getRPCType(i int) string {
 	if i == 0 {

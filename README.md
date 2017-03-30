@@ -28,7 +28,6 @@ Snap plugins using plugin-lib-go can be run independent of Snap to show their cu
 * Config policy
     * Warning if config items required and not provided
 * Collectable metrics
-* Metric catalog
 * Runtime details
     * Plugin version
     * RPC type and version
@@ -37,7 +36,7 @@ Snap plugins using plugin-lib-go can be run independent of Snap to show their cu
 * How long it took to run each of these diagnostics
 
 ### Running Diagnostics
-Running plugin diagnostics is easy! Simply build the plugin, then run the executable `$./build/darwin/x86_64/examples/snap-plugin-collector-rand`. When ran on its own, it will show a warning if a config is required for the plugin to load. 
+Running plugin diagnostics is easy! Simply build the plugin, then run the executable `$./build/${GOOS}/${GOARCH}/<plugin binary>`. When ran on its own, it will show a warning if a config is required for the plugin to load. 
 
 ### Global Flags
 For specific details and to see all the options when running, run the plugin with the `-help` flag. The flag options are:
