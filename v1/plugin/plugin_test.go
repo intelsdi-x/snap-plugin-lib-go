@@ -65,11 +65,6 @@ func TestParsingArgs(t *testing.T) {
 	Convey("With plugin lib parsing command line arguments", t, func() {
 		mockInputOutput := newMockInputOutput(libInputOutput)
 		libInputOutput = mockInputOutput
-		Convey("invalid JSON will be rejected with an error", func() {
-			mockInputOutput.mockArgs = strings.Fields("main {::invalid::JSON::}")
-			_, err := getArgs()
-			So(err, ShouldNotBeNil)
-		})
 		Convey("ListenPort should be properly parsed", func() {
 			mockInputOutput.mockArgs = strings.Fields(`main {"ListenPort":"4414"}`)
 			args, err := getArgs()

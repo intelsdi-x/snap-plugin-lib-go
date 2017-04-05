@@ -23,11 +23,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"runtime"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -60,6 +67,8 @@ type Publisher interface {
 
 	Publish([]Metric, Config) error
 }
+
+var App *cli.App
 
 // StreamCollector is a Collector that can send back metrics on it's own
 // defined interval (within configurable limits). These limits are set by the
@@ -229,7 +238,7 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterCollectorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartProcessor is given a Processor implementation and its metadata,
@@ -245,7 +254,7 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterProcessorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartPublisher is given a Publisher implementation and its metadata,
@@ -261,7 +270,7 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterPublisherServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 // StartStreamCollector is given a StreamCollector implementation and its metadata,
@@ -278,7 +287,7 @@ func StartStreamCollector(plugin StreamCollector, name string, version int, opts
 		pluginProxy: *newPluginProxy(plugin),
 	}
 	rpc.RegisterStreamCollectorServer(server, proxy)
-	return startPlugin(server, m, &proxy.pluginProxy)
+	return startPlugin(server, *m, &proxy.pluginProxy)
 }
 
 type server interface {
@@ -294,8 +303,52 @@ type preamble struct {
 	ErrorMessage  string
 }
 
-func startPlugin(srv server, m *meta, p *pluginProxy) int {
-	l, err := net.Listen("tcp", ":"+listenPort)
+func startPlugin(srv server, m meta, p *pluginProxy) int {
+	if flag.Lookup("test.v") != nil {
+		printPreamble(srv, &m, p)
+	} else {
+		if App == nil {
+			App = cli.NewApp()
+		}
+		App.Name = m.Name
+		App.Version = strconv.Itoa(m.Version)
+		App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
+		App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath}...)
+		App.Action = func(c *cli.Context) error {
+			if c.NArg() > 0 {
+				printPreamble(srv, &m, p)
+			} else { //implies run diagnostics
+				var c Config
+				if configIn != "" {
+					err := json.Unmarshal([]byte(configIn), &c)
+					if err != nil {
+						return fmt.Errorf("! Error when parsing config. Please ensure your config is valid. \n %v", err)
+					}
+				}
+
+				switch p.plugin.(type) {
+				case Collector:
+					showDiagnostics(m, p, c)
+				case Processor:
+					fmt.Println("Diagnostics not currently available for processor plugins.")
+				case Publisher:
+					fmt.Println("Diagnostics not currently available for publisher plugins.")
+				}
+			}
+			if arg.Pprof {
+				return getPort()
+			}
+
+			return nil
+		}
+		App.Run(os.Args)
+	}
+
+	return 0
+}
+
+func printPreamble(srv server, m *meta, p *pluginProxy) error {
+	l, err := net.Listen("tcp", ":"+arg.ListenPort)
 	if err != nil {
 		panic("Unable to get open port")
 	}
@@ -328,5 +381,186 @@ func startPlugin(srv server, m *meta, p *pluginProxy) int {
 	go p.HeartbeatWatch()
 	// TODO(danielscottt): exit code
 	<-p.halt
-	return 0
+
+	return nil
+}
+
+// GetPluginType converts a pluginType to a string
+// describing what type of plugin this is
+func getPluginType(plType pluginType) string {
+	switch plType {
+	case collectorType:
+		return "collector"
+
+	case publisherType:
+		return "publisher"
+
+	case processorType:
+		return "processor"
+	}
+	return ""
+}
+
+// GetRPCType converts a RPCType (int) to a string
+// as described in snap/control/plugin/plugin.go
+func getRPCType(i int) string {
+	if i == 0 {
+		return "NativeRPC (0)"
+	} else if i == 2 {
+		return "GRPC (2)"
+	}
+	return "Not a valid RPC Type"
+}
+
+func showDiagnostics(m meta, p *pluginProxy, c Config) error {
+	defer timeTrack(time.Now(), "showDiagnostics")
+	printRuntimeDetails(m)
+	err := printConfigPolicy(p, c)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	met, err := printMetricTypes(p, c)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = printCollectMetrics(p, met)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	printContactUs()
+	return nil
+
+}
+
+func printMetricTypes(p *pluginProxy, conf Config) ([]Metric, error) {
+	defer timeTrack(time.Now(), "printMetricTypes")
+	met, err := p.plugin.(Collector).GetMetricTypes(conf)
+	if err != nil {
+		return nil, fmt.Errorf("! Error in the call to GetMetricTypes: \n%v", err)
+	}
+	//apply any config passed in to met so that
+	//CollectMetrics can see the config for each metric
+	for i := range met {
+		met[i].Config = conf
+	}
+
+	fmt.Println("Metric catalog will be updated to include: ")
+	for _, j := range met {
+		fmt.Printf("    Namespace: %v \n", j.Namespace.String())
+	}
+	return met, nil
+}
+
+func printConfigPolicy(p *pluginProxy, conf Config) error {
+	defer timeTrack(time.Now(), "printConfigPolicy")
+	requiredConfigs := ""
+	cPolicy, err := p.plugin.(Collector).GetConfigPolicy()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Config Policy:")
+	if len(cPolicy.stringRules) > 0 {
+		for k, v := range cPolicy.stringRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+					//TODO: Check if config values are of correct type
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.integerRules) > 0 {
+		for k, v := range cPolicy.integerRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.floatRules) > 0 {
+		for k, v := range cPolicy.floatRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+	if len(cPolicy.boolRules) > 0 {
+		for k, v := range cPolicy.boolRules {
+			fmt.Printf("    Namespace: %-30v", k)
+			for key, val := range v.Rules {
+				fmt.Printf("  Key: %-10v  Info: ", key)
+				if val.String() != "" {
+					_, ok := conf[key]
+					if strings.Contains(val.String(), "required:true") && !ok {
+						requiredConfigs += "! Warning: \"" + key + "\" required by plugin and not provided in config \n"
+					}
+					fmt.Printf("%v", val.String())
+				}
+			}
+			fmt.Printf("\n")
+		}
+	}
+
+	if requiredConfigs != "" {
+		requiredConfigs += "! Please provide config in form of: -config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'\n"
+		err := fmt.Errorf(requiredConfigs)
+		return err
+	}
+
+	return nil
+}
+
+func printCollectMetrics(p *pluginProxy, m []Metric) error {
+	defer timeTrack(time.Now(), "printCollectMetrics")
+	cltd, err := p.plugin.(Collector).CollectMetrics(m)
+	if err != nil {
+		return fmt.Errorf("! Error in the call to CollectMetrics. Please ensure your config contains any required fields mentioned in the error below. \n %v", err)
+	}
+	fmt.Println("Metrics that can be collected right now are: ")
+	for _, j := range cltd {
+		fmt.Printf("    Namespace: %-30v  Type: %-10T  Value: %v \n", j.Namespace, j.Data, j.Data)
+	}
+	return nil
+}
+
+func printRuntimeDetails(m meta) {
+	defer timeTrack(time.Now(), "printRuntimeDetails")
+	fmt.Printf("Runtime Details:\n    PluginName: %v, Version: %v \n    RPC Type: %v, RPC Version: %v \n", m.Name, m.Version, getRPCType(m.RPCType), m.RPCVersion)
+	fmt.Printf("    Operating system: %v \n    Architecture: %v \n    Go version: %v \n", runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+func printContactUs() {
+	fmt.Print("Thank you for using this Snap plugin. If you have questions or are running \ninto errors, please contact us on Github (github.com/intelsdi-x/snap) or \nour Slack channel (intelsdi-x.herokuapp.com). \nThe repo for this plugin can be found: github.com/intelsdi-x/<plugin-name>. \nWhen submitting a new issue on Github, please include this diagnostic \nprint out so that we have a starting point for addressing your question. \nThank you. \n\n")
+}
+
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	fmt.Printf("%s took %s \n\n", name, elapsed)
 }

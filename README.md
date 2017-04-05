@@ -22,4 +22,31 @@ A Snap plugin is a program that responds to a set of well defined [gRPC](http://
 You will find [example plugins](examples) that cover the basics for writing collector, processor, and publisher plugins in the examples folder.
 
 
+## Snap Diagnostics
+Snap plugins using plugin-lib-go can be run independent of Snap to show their current running diagnostics. This diagnostic information includes:
+* Warning if dependencies not met
+* Config policy
+    * Warning if config items required and not provided
+* Collectable metrics
+* Runtime details
+    * Plugin version
+    * RPC type and version
+    * OS, architecture
+    * Golang version
+* How long it took to run each of these diagnostics
 
+### Running Diagnostics
+Running plugin diagnostics is easy! Simply build the plugin, then run the executable `$./build/${GOOS}/${GOARCH}/<plugin binary>`. When ran on its own, it will show a warning if a config is required for the plugin to load. 
+
+### Global Flags
+For specific details and to see all the options when running, run the plugin with the `-help` flag. The flag options are:
+```--config value       config file to use
+   --port value         port to listen on
+   --pingTimeout value  how much time must elapse before a lack of Ping results in a timeout (default: 0s)
+   --pprof              something about pprof
+   --help, -h           show help
+   --version, -v        print the version
+```
+
+### Config flag
+When `-config` is set, it expects a parameter in the form of a JSON. This is of the form `'{}'`. An example config is: `-config '{\"key\":\"kelly\", \"spirit-animal\":\"coatimundi\"}'`.
