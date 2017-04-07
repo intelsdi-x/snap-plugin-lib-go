@@ -61,7 +61,7 @@ type RandCollector struct {
 	metrics []plugin.Metric
 }
 
-// StreamMetrics taks both an in and out channel of []plugin.Metric
+// StreamMetrics takes both an in and out channel of []plugin.Metric
 //
 // The metrics_in channel is used to set/update the metrics that Snap is
 // currently requesting to be collected by the plugin.
