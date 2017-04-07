@@ -5,7 +5,6 @@ import "github.com/urfave/cli"
 var (
 	flConfig = cli.StringFlag{
 		Name:        "config",
-		Value:       "",
 		Usage:       "config file to use",
 		Destination: &configIn,
 	}
@@ -15,14 +14,12 @@ var (
 	flPort = cli.StringFlag{
 		Name:        "port",
 		Usage:       "port to listen on",
-		Value:       "0",
 		Destination: &arg.ListenPort,
 	}
 	// If PingTimeoutDuration was provided we set it
 	flPingTimeout = cli.DurationFlag{
 		Name:        "pingTimeout",
 		Usage:       "how much time must elapse before a lack of Ping results in a timeout",
-		Value:       PingTimeoutDurationDefault,
 		Destination: &arg.PingTimeoutDuration,
 	}
 	flPprof = cli.BoolFlag{
@@ -38,13 +35,21 @@ var (
 	flCertPath = cli.StringFlag{
 		Name:        "certPath",
 		Usage:       "necessary to provide when TLS enabled",
-		Value:       "",
 		Destination: &arg.CertPath,
 	}
 	flKeyPath = cli.StringFlag{
 		Name:        "keyPath",
 		Usage:       "necessary to provide when TLS enabled",
-		Value:       "",
 		Destination: &arg.KeyPath,
+	}
+	flStandAlone = cli.BoolFlag{
+		Name:        "standAlone",
+		Usage:       "enable stand alone plugin",
+		Destination: &standAlone,
+	}
+	flHttpPort = cli.IntFlag{
+		Name:        "httpPort",
+		Usage:       "specify http port when standAlone is set",
+		Destination: &httpPort,
 	}
 )

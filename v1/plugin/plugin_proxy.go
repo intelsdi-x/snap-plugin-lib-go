@@ -33,8 +33,7 @@ import (
 
 var (
 	// Timeout settings
-	// How much time must elapse before a lack of Ping results in a timeout
-	PingTimeoutDurationDefault = time.Millisecond * 1500
+
 	// How many successive PingTimeouts must occur to equal a failure.
 	PingTimeoutLimit = 3
 )
@@ -62,7 +61,7 @@ func newPluginProxy(plugin Plugin) *pluginProxy {
 func defaultPluginProxyCtor(plugin Plugin) *pluginProxy {
 	return &pluginProxy{
 		plugin:              plugin,
-		PingTimeoutDuration: PingTimeoutDurationDefault,
+		PingTimeoutDuration: arg.PingTimeoutDuration,
 		halt:                make(chan struct{}),
 	}
 }

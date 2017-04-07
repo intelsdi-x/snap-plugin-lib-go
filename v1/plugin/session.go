@@ -10,15 +10,18 @@ import (
 
 	"net/http/pprof"
 
+	logger "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
 )
 
 var (
-	pprofPort = "0"
-	configIn  = ""
-	arg       = Arg{
+	pprofPort  = "0"
+	configIn   = ""
+	standAlone = false
+	httpPort   = 0
+	arg        = Arg{
 		LogLevel:            uint8(2),
-		PingTimeoutDuration: PingTimeoutDurationDefault,
+		PingTimeoutDuration: time.Millisecond * 1500,
 		ListenPort:          "0",
 		Pprof:               false,
 		CertPath:            "",
@@ -58,7 +61,11 @@ func getArgs() (*Arg, error) {
 	if len(osArgs) > 1 && osArgs[1] != "" {
 		paramStr = osArgs[1]
 	}
-	json.Unmarshal([]byte(paramStr), &arg)
+	err := json.Unmarshal([]byte(paramStr), &arg)
+	logger.Errorf("!!!!!!!!! timeout: %v", arg.PingTimeoutDuration)
+
+	logger.Errorf("!!!!!!!!! err=%v", err)
+
 	if arg.Pprof {
 		return &arg, getPort()
 	}

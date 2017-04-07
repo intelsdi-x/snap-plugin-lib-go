@@ -25,7 +25,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -313,10 +315,46 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 		App.Name = m.Name
 		App.Version = strconv.Itoa(m.Version)
 		App.Usage = "A Snap " + getPluginType(m.Type) + " plugin"
-		App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath}...)
+		App.Flags = append(App.Flags, []cli.Flag{flConfig, flPort, flPingTimeout, flPprof, flTLS, flCertPath, flKeyPath, flStandAlone, flHttpPort}...)
 		App.Action = func(c *cli.Context) error {
-			if c.NArg() > 0 {
-				printPreamble(srv, &m, p)
+			if standAlone {
+				//if -standalone create http server (through go routine) and print preamble to it.
+				//they can specify port with flag -httpPort for http server
+				if httpPort != 0 {
+					//find port
+					//for now: 8181
+					httpPort = 8181
+				}
+
+				preamble, err := printPreamble(srv, &m, p)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				go func() {
+					http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+						fmt.Fprintln(w, preamble)
+					})
+
+					listener, err := net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
+					if err != nil {
+						panic("Unable to get open port")
+					}
+					defer listener.Close()
+					err = http.Serve(listener, nil)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}()
+
+				<-p.halt
+			} else if c.NArg() > 0 {
+				_, err := printPreamble(srv, &m, p)
+				if err != nil {
+					log.Printf("Error: %v\n", err)
+					log.Fatal(err)
+				}
+				<-p.halt
 			} else { //implies run diagnostics
 				var c Config
 				if configIn != "" {
@@ -347,7 +385,7 @@ func startPlugin(srv server, m meta, p *pluginProxy) int {
 	return 0
 }
 
-func printPreamble(srv server, m *meta, p *pluginProxy) error {
+func printPreamble(srv server, m *meta, p *pluginProxy) (string, error) {
 	l, err := net.Listen("tcp", ":"+arg.ListenPort)
 	if err != nil {
 		panic("Unable to get open port")
@@ -380,9 +418,9 @@ func printPreamble(srv server, m *meta, p *pluginProxy) error {
 	libInputOutput.printOut(string(preambleJSON))
 	go p.HeartbeatWatch()
 	// TODO(danielscottt): exit code
-	<-p.halt
+	// <-p.halt
 
-	return nil
+	return string(preambleJSON), nil
 }
 
 // GetPluginType converts a pluginType to a string
