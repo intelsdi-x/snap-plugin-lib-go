@@ -111,6 +111,7 @@ type meta struct {
 	CertPath         string
 	KeyPath          string
 	TLSEnabled       bool
+	RootCertPaths    string
 }
 
 // newMeta sets defaults, applies options, and then returns a meta struct

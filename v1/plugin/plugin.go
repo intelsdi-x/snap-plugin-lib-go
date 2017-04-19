@@ -24,9 +24,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 
+	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -95,7 +98,7 @@ type tlsServerSetup interface {
 	makeTLSConfig() *tls.Config
 	// readRootCAs is a function that delivers root CA certificates for the purpose
 	// of TLS initialization
-	readRootCAs() (*x509.CertPool, error)
+	readRootCAs(rootCertPaths string) (*x509.CertPool, error)
 	// updateServerOptions configures any additional options for GRPC server
 	updateServerOptions(options ...grpc.ServerOption) []grpc.ServerOption
 }
@@ -138,13 +141,63 @@ func (ts tlsServerDefaultSetup) makeTLSConfig() *tls.Config {
 }
 
 // readRootCAs delivers a standard source of root CAs from system
-func (ts tlsServerDefaultSetup) readRootCAs() (*x509.CertPool, error) {
-	return x509.SystemCertPool()
+func (ts tlsServerDefaultSetup) readRootCAs(rootCertPaths string) (*x509.CertPool, error) {
+	if rootCertPaths == "" {
+		return x509.SystemCertPool()
+	}
+	certPaths := filepath.SplitList(rootCertPaths)
+	return ts.loadRootCerts(certPaths)
 }
 
 // updateServerOptions a standard implementation delivers no additional options
 func (ts tlsServerDefaultSetup) updateServerOptions(options ...grpc.ServerOption) []grpc.ServerOption {
 	return options
+}
+
+func (ts tlsServerDefaultSetup) loadRootCerts(certPaths []string) (rootCAs *x509.CertPool, err error) {
+	var path string
+	var filepaths []string
+	// list potential certificate files
+	for _, path := range certPaths {
+		var stat os.FileInfo
+		if stat, err = os.Stat(path); err != nil {
+			return nil, fmt.Errorf("unable to process CA cert source path %s: %v", path, err)
+		}
+		if !stat.IsDir() {
+			filepaths = append(filepaths, path)
+			continue
+		}
+		var subfiles []os.FileInfo
+		if subfiles, err = ioutil.ReadDir(path); err != nil {
+			return nil, fmt.Errorf("unable to process CA cert source directory %s: %v", path, err)
+		}
+		for _, subfile := range subfiles {
+			subpath := filepath.Join(path, subfile.Name())
+			if subfile.IsDir() {
+				log.WithField("path", subpath).Debug("Skipping second level directory found among certificate files")
+				continue
+			}
+			filepaths = append(filepaths, subpath)
+		}
+	}
+	rootCAs = x509.NewCertPool()
+	numread := 0
+	for _, path = range filepaths {
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.WithFields(log.Fields{"path": path, "error": err}).Debug("Unable to read cert file")
+			continue
+		}
+		if !rootCAs.AppendCertsFromPEM(b) {
+			log.WithField("path", path).Debug("Didn't find any usable certificates in cert file")
+			continue
+		}
+		numread++
+	}
+	if numread == 0 {
+		return nil, fmt.Errorf("found no usable certificates in given locations")
+	}
+	return rootCAs, nil
 }
 
 // readOSArgs implementation that returns application args passed by OS
@@ -172,7 +225,7 @@ func makeGRPCCredentials(m *meta) (creds credentials.TransportCredentials, err e
 		}
 		config = tlsSetup.makeTLSConfig()
 		config.Certificates = []tls.Certificate{cert}
-		if config.RootCAs, err = tlsSetup.readRootCAs(); err != nil {
+		if config.ClientCAs, err = tlsSetup.readRootCAs(m.RootCertPaths); err != nil {
 			return nil, fmt.Errorf("unable to read root CAs: %v", err.Error())
 		}
 	}
@@ -195,6 +248,7 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 	m.CertPath = args.CertPath
 	m.KeyPath = args.KeyPath
 	m.TLSEnabled = true
+	m.RootCertPaths = args.RootCertPaths
 	return nil
 }
 
