@@ -27,9 +27,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
@@ -45,7 +46,7 @@ type Collector interface {
 	CollectMetrics([]Metric) ([]Metric, error)
 }
 
-// Processor is a plugin which filters, agregates, or decorates data in the
+// Processor is a plugin which filters, aggregates, or decorates data in the
 // Snap pipeline.
 type Processor interface {
 	Plugin
@@ -61,9 +62,14 @@ type Publisher interface {
 	Publish([]Metric, Config) error
 }
 
-// StreamCollector is a Collector that can send back metrics on it's own
-// defined interval (within configurable limits). These limits are set by the
-// SetMaxBuffer and SetMaxCollectionDuration funcs.
+/*
+ StreamCollector is a Collector that can send back metrics within configurable limits defined in task manifest.
+ These limits might be determined by user by set a value of:
+  - `max-metrics-buffer`, default to 0 what means no buffering and sending reply with streaming metrics immediately
+  - `max-collect-duration`, default to 10s what means after 10s no new metrics are received, send a reply whatever data it has
+  in buffer instead of waiting longer
+*/
+
 type StreamCollector interface {
 	Plugin
 
@@ -274,8 +280,10 @@ func StartStreamCollector(plugin StreamCollector, name string, version int, opts
 		panic(err)
 	}
 	proxy := &StreamProxy{
-		plugin:      plugin,
-		pluginProxy: *newPluginProxy(plugin),
+		plugin:             plugin,
+		pluginProxy:        *newPluginProxy(plugin),
+		maxCollectDuration: defaultMaxCollectDuration,
+		maxMetricsBuffer:   defaultMaxMetricsBuffer,
 	}
 	rpc.RegisterStreamCollectorServer(server, proxy)
 	return startPlugin(server, m, &proxy.pluginProxy)

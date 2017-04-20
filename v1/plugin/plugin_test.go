@@ -242,7 +242,7 @@ type mockStreamer struct {
 	maxCollectDuration time.Duration
 	inMetric           chan []Metric
 	outMetric          chan []Metric
-	action             func(chan []Metric, time.Duration)
+	action             func(chan []Metric, time.Duration, []Metric)
 }
 
 func newMockStreamer() *mockStreamer {
@@ -253,12 +253,12 @@ func newMockErrStreamer() *mockStreamer {
 	return &mockStreamer{err: errors.New("empty")}
 }
 
-func newMockStreamerStream(action func(chan []Metric, time.Duration)) *mockStreamer {
+func newMockStreamerStream(action func(chan []Metric, time.Duration, []Metric)) *mockStreamer {
 	return &mockStreamer{action: action}
 }
 
-func (mc *mockStreamer) doAction(t time.Duration) {
-	go mc.action(mc.outMetric, t)
+func (mc *mockStreamer) doAction(t time.Duration, mts []Metric) {
+	go mc.action(mc.outMetric, t, mts)
 }
 func (mc *mockStreamer) GetMetricTypes(cfg Config) ([]Metric, error) {
 	if mc.err != nil {

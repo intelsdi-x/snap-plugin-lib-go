@@ -47,12 +47,20 @@ func (m mockStreamServer) Recv() (*rpc.CollectArg, error) {
 }
 
 func TestStreamMetrics(t *testing.T) {
-	// Call into stream metrics
+	// Send a metric down to ch every t time
+	mockStreamAction := func(ch chan []Metric, t time.Duration, mts []Metric) {
+		for {
+			ch <- mts
+			time.Sleep(t)
+		}
+	}
 	Convey("TestStreamMetrics", t, func() {
 		Convey("Error calling StreamMetrics", func() {
 			sp := StreamProxy{
-				pluginProxy: *newPluginProxy(newMockErrStreamer()),
-				plugin:      newMockErrStreamer(),
+				pluginProxy:        *newPluginProxy(newMockErrStreamer()),
+				plugin:             newMockErrStreamer(),
+				maxMetricsBuffer:   defaultMaxMetricsBuffer,
+				maxCollectDuration: defaultMaxCollectDuration,
 			}
 			sendChan := make(chan *rpc.CollectReply)
 			recvChan := make(chan *rpc.CollectArg)
@@ -64,14 +72,16 @@ func TestStreamMetrics(t *testing.T) {
 			err := sp.StreamMetrics(s)
 			So(err, ShouldNotBeNil)
 		})
-
 		Convey("Successful Call to StreamMetrics", func() {
 			// Make a successful call to stream metrics
 			pl := newMockStreamer()
 			sp := StreamProxy{
-				pluginProxy: *newPluginProxy(newMockStreamer()),
-				plugin:      pl,
+				pluginProxy:        *newPluginProxy(newMockStreamer()),
+				plugin:             pl,
+				maxMetricsBuffer:   defaultMaxMetricsBuffer,
+				maxCollectDuration: defaultMaxCollectDuration,
 			}
+
 			sendChan := make(chan *rpc.CollectReply)
 			recvChan := make(chan *rpc.CollectArg)
 			s := mockStreamServer{
@@ -89,19 +99,13 @@ func TestStreamMetrics(t *testing.T) {
 				// plugin returns metrics
 			})
 		})
-		Convey("Successfully stream metrics from plugin", func() {
-			// Sends a metric down ch every t time
-			f := func(ch chan []Metric, t time.Duration) {
-				mt := Metric{}
-				for {
-					time.Sleep(t)
-					ch <- []Metric{mt}
-				}
-			}
-			pl := newMockStreamerStream(f)
+		Convey("Successfully stream metrics from plugin immediately", func() {
+			pl := newMockStreamerStream(mockStreamAction)
 			sp := StreamProxy{
-				pluginProxy: *newPluginProxy(newMockStreamer()),
-				plugin:      pl,
+				pluginProxy:        *newPluginProxy(newMockStreamer()),
+				plugin:             pl,
+				maxMetricsBuffer:   defaultMaxMetricsBuffer,
+				maxCollectDuration: defaultMaxCollectDuration,
 			}
 			sendChan := make(chan *rpc.CollectReply)
 			recvChan := make(chan *rpc.CollectArg)
@@ -113,21 +117,90 @@ func TestStreamMetrics(t *testing.T) {
 				err := sp.StreamMetrics(s)
 				So(err, ShouldBeNil)
 			}()
-			// Need to give time for streamMetrics call to propogate
+			// Need to give time for streamMetrics call to propagate
 			time.Sleep(time.Millisecond * 100)
 			Convey("get metrics through stream proxy", func() {
 				So(pl.outMetric, ShouldNotBeNil)
-				pl.doAction(time.Millisecond * 100)
+				// Create mocked metrics
+				metrics := []Metric{
+					Metric{},
+				}
+				// Send metrics down to channel every 100 ms
+				pl.doAction(time.Millisecond*100, metrics)
 				select {
 				case mts := <-sendChan:
 					// Success! we got something....
 					So(mts, ShouldNotBeNil)
 					So(mts.Metrics_Reply, ShouldNotBeNil)
 					So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
-					So(len(mts.Metrics_Reply.Metrics), ShouldEqual, 1)
+					So(len(mts.Metrics_Reply.Metrics), ShouldEqual, len(metrics))
 				case <-time.After(time.Second):
 					t.Fatal("timed out waiting for metrics to go through stream collector")
 				}
+			})
+		})
+		Convey("Successfully stream metrics from plugin", func() {
+			pl := newMockStreamerStream(mockStreamAction)
+
+			// Set maxMetricsBuffer to define buffer capacity
+			sp := StreamProxy{
+				pluginProxy:        *newPluginProxy(newMockStreamer()),
+				plugin:             pl,
+				maxMetricsBuffer:   5,
+				maxCollectDuration: time.Millisecond * 200,
+			}
+			sendChan := make(chan *rpc.CollectReply)
+			recvChan := make(chan *rpc.CollectArg)
+			s := mockStreamServer{
+				sendChan: sendChan,
+				recvChan: recvChan,
+			}
+			go func() {
+				err := sp.StreamMetrics(s)
+				So(err, ShouldBeNil)
+			}()
+			// Create mocked metrics
+			metrics := []Metric{}
+			for i := 0; i < 2; i++ {
+				metrics = append(metrics, Metric{})
+			}
+			// Need to give time for streamMetrics call to propagate
+			time.Sleep(time.Millisecond * 100)
+			Convey("get buffered metrics through stream proxy when maxMetricsBuffer is reached", func() {
+				Convey("when maxMetricsBuffer is reached", func() {
+					So(pl.outMetric, ShouldNotBeNil)
+					// Send metrics down to channel every 100 ms
+					pl.doAction(time.Millisecond*100, metrics)
+					select {
+					case mts := <-sendChan:
+						// Success! we got something....
+						So(mts, ShouldNotBeNil)
+						So(mts.Metrics_Reply, ShouldNotBeNil)
+						So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
+						// Expect to get 5 metrics (see value of maxMetricsBuffer)
+						So(len(mts.Metrics_Reply.Metrics), ShouldEqual, sp.maxMetricsBuffer)
+					case <-time.After(time.Second):
+						t.Fatal("timed out waiting for metrics to go through stream collector")
+					}
+				})
+				Convey("when maxCollectDuration is exceeded", func() {
+					So(pl.outMetric, ShouldNotBeNil)
+					// Send metrics down to channel every 300 ms
+					// notice it is longer than set maxCollectDuration
+					pl.doAction(time.Millisecond*300, metrics)
+					select {
+					case mts := <-sendChan:
+						// Success! we got something....
+						So(mts, ShouldNotBeNil)
+						So(mts.Metrics_Reply, ShouldNotBeNil)
+						So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
+						// Expect to get 2 metrics, so even a buffer is not full (its capacity is 5),
+						// data will be send after exceeding maxCollectDuration = 200 ms
+						So(len(mts.Metrics_Reply.Metrics), ShouldEqual, len(metrics))
+					case <-time.After(time.Second):
+						t.Fatal("timed out waiting for metrics to go through stream collector")
+					}
+				})
 			})
 		})
 	})
