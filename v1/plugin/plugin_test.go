@@ -23,20 +23,62 @@ package plugin
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"google.golang.org/grpc"
+)
+
+const (
+	tlsTestCA     = "libtest-CA"
+	tlsTestSrv    = "libtest-srv"
+	tlsTestCli    = "libtest-cli"
+	crtFileExt    = ".crt"
+	keyFileExt    = ".key"
+	badCrtFileExt = "-BAD.crt"
 )
 
 var (
-	metricMap = getMetricData()
+	metricMap         = getMetricData()
+	testFilesToRemove []string
 )
+
+type mockTLSSetup struct {
+	prevSetup tlsServerSetup
+
+	doMakeTLSConfig       func() *tls.Config
+	doReadRootCAs         func(rootCertPaths string) (*x509.CertPool, error)
+	doUpdateServerOptions func(options ...grpc.ServerOption) []grpc.ServerOption
+}
+
+func newMockTLSSetup(prevSetup tlsServerSetup) *mockTLSSetup {
+	return &mockTLSSetup{prevSetup: prevSetup,
+		doMakeTLSConfig:       prevSetup.makeTLSConfig,
+		doReadRootCAs:         prevSetup.readRootCAs,
+		doUpdateServerOptions: prevSetup.updateServerOptions,
+	}
+}
+
+func (m *mockTLSSetup) makeTLSConfig() *tls.Config {
+	return m.doMakeTLSConfig()
+}
+
+func (m *mockTLSSetup) readRootCAs(rootCertPaths string) (*x509.CertPool, error) {
+	return m.doReadRootCAs(rootCertPaths)
+}
+
+func (m *mockTLSSetup) updateServerOptions(options ...grpc.ServerOption) []grpc.ServerOption {
+	return m.doUpdateServerOptions(options...)
+}
 
 func TestPlugin(t *testing.T) {
 	Convey("Basing on plugin lib routines", t, func() {
@@ -81,6 +123,12 @@ func TestParsingArgs(t *testing.T) {
 			args, err := getArgs()
 			So(err, ShouldBeNil)
 			So(args.PingTimeoutDuration, ShouldEqual, 3141)
+		})
+		Convey("RootCertPaths should be properly parsed", func() {
+			mockInputOutput.mockArgs = strings.Fields(`main {"RootCertPaths":"test-cert.crt"}`)
+			args, err := getArgs()
+			So(err, ShouldBeNil)
+			So(args.RootCertPaths, ShouldEqual, "test-cert.crt")
 		})
 		Reset(func() {
 			libInputOutput = mockInputOutput.prevInputOutput
@@ -172,6 +220,66 @@ func TestMakeTLSConfig(t *testing.T) {
 			So(config.CipherSuites, ShouldNotBeEmpty)
 		})
 	})
+}
+
+func TestMakeGRPCCredentials(t *testing.T) {
+	Convey("Having TLS-aware plugin library", t, func() {
+		Convey("and plugin metadata with TLS enabled", func() {
+			m := meta{
+				TLSEnabled:    true,
+				CertPath:      tlsTestSrv + crtFileExt,
+				KeyPath:       tlsTestSrv + keyFileExt,
+				RootCertPaths: tlsTestCA + crtFileExt,
+			}
+			mockServerSetupInUse := newMockTLSSetup(tlsSetup)
+			tlsSetup = mockServerSetupInUse
+			var configReport *tls.Config
+			mockServerSetupInUse.doMakeTLSConfig = func() *tls.Config {
+				tlsConfig := mockServerSetupInUse.prevSetup.makeTLSConfig()
+				configReport = tlsConfig
+				return tlsConfig
+			}
+			Convey("library should build GRPC credentials without issues", func() {
+				_, err := makeGRPCCredentials(&m)
+				So(err, ShouldBeNil)
+				Convey("certificate and client root certs should be loaded", func() {
+					So(configReport.Certificates, ShouldNotBeEmpty)
+					So(configReport.ClientCAs.Subjects(), ShouldNotBeEmpty)
+				})
+			})
+			Convey("but with invalid server cert path", func() {
+				m.CertPath = "MISSING-FILE"
+				Convey("library should fail to build GRPC credentials, reporting an error", func() {
+					_, err := makeGRPCCredentials(&m)
+					So(err, ShouldNotBeNil)
+				})
+			})
+			Convey("but with invalid server key path", func() {
+				m.KeyPath = "MISSING-FILE"
+				Convey("library should fail to build GRPC credentials, reporting an error", func() {
+					_, err := makeGRPCCredentials(&m)
+					So(err, ShouldNotBeNil)
+				})
+			})
+			Convey("but with invalid root cert paths", func() {
+				m.RootCertPaths = "MANY-MISSING-FILES"
+				Convey("library should fail to build GRPC credentials, reporting an error", func() {
+					_, err := makeGRPCCredentials(&m)
+					So(err, ShouldNotBeNil)
+				})
+			})
+			Reset(func() {
+				tlsSetup = mockServerSetupInUse.prevSetup
+			})
+		})
+	})
+}
+
+func TestMain(m *testing.M) {
+	setUpTestMain()
+	retCode := m.Run()
+	tearDownTestMain()
+	os.Exit(retCode)
 }
 
 type mockPlugin struct {
@@ -398,4 +506,75 @@ type mockServer struct {
 
 func (ms *mockServer) Serve(net.Listener) error {
 	return errors.New("error")
+}
+
+// buildTLSCerts builds a set of certificates and private keys for testing TLS.
+// Generated files include: CA certificate, server certificate and private key,
+// client certificate and private key, and alternate (BAD) CA certificate.
+// Certificate and key files are named after given common names (e.g.: srvCN).
+func buildTLSCerts(caCN, srvCN, cliCN string) (resFiles []string, err error) {
+	ou := fmt.Sprintf("%06x", rand.Intn(1<<24))
+	u := &certTestUtil{}
+	caCertTpl, caCert, caPrivKey, err := u.makeCACertKeyPair(caCN, ou, defaultKeyValidPeriod)
+	if err != nil {
+		return nil, err
+	}
+	caCertFn := caCN + crtFileExt
+	if err := u.writePEMFile(caCertFn, certificatePEMHeader, caCert); err != nil {
+		return nil, err
+	}
+	resFiles = append(resFiles, caCertFn)
+	_, caBadCert, _, err := u.makeCACertKeyPair(caCN, ou, defaultKeyValidPeriod)
+	if err != nil {
+		return resFiles, err
+	}
+	badCaCertFn := caCN + badCrtFileExt
+	if err := u.writePEMFile(badCaCertFn, certificatePEMHeader, caBadCert); err != nil {
+		return resFiles, err
+	}
+	resFiles = append(resFiles, badCaCertFn)
+	srvCert, srvPrivKey, err := u.makeSubjCertKeyPair(srvCN, ou, defaultKeyValidPeriod, caCertTpl, caPrivKey)
+	if err != nil {
+		return resFiles, err
+	}
+	srvCertFn := srvCN + crtFileExt
+	srvKeyFn := srvCN + keyFileExt
+	if err := u.writePEMFile(srvCertFn, certificatePEMHeader, srvCert); err != nil {
+		return resFiles, err
+	}
+	resFiles = append(resFiles, srvCertFn)
+	if err := u.writePEMFile(srvKeyFn, rsaKeyPEMHeader, x509.MarshalPKCS1PrivateKey(srvPrivKey)); err != nil {
+		return resFiles, err
+	}
+	resFiles = append(resFiles, srvKeyFn)
+	cliCert, cliPrivKey, err := u.makeSubjCertKeyPair(cliCN, ou, defaultKeyValidPeriod, caCertTpl, caPrivKey)
+	if err != nil {
+		return resFiles, err
+	}
+	cliCertFn := cliCN + crtFileExt
+	cliKeyFn := cliCN + keyFileExt
+	if err := u.writePEMFile(cliCertFn, certificatePEMHeader, cliCert); err != nil {
+		return resFiles, err
+	}
+	resFiles = append(resFiles, cliCertFn)
+	if err := u.writePEMFile(cliKeyFn, rsaKeyPEMHeader, x509.MarshalPKCS1PrivateKey(cliPrivKey)); err != nil {
+		return resFiles, err
+	}
+	resFiles = append(resFiles, cliKeyFn)
+	return resFiles, nil
+}
+
+func setUpTestMain() {
+	rand.Seed(time.Now().Unix())
+	if tlsTestFiles, err := buildTLSCerts(tlsTestCA, tlsTestSrv, tlsTestCli); err != nil {
+		panic(err)
+	} else {
+		testFilesToRemove = append(testFilesToRemove, tlsTestFiles...)
+	}
+}
+
+func tearDownTestMain() {
+	for _, fn := range testFilesToRemove {
+		os.Remove(fn)
+	}
 }

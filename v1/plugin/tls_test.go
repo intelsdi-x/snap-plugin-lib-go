@@ -1,4 +1,4 @@
-// +build medium
+// +build medium small
 
 /*
 http://www.apache.org/licenses/LICENSE-2.0.txt

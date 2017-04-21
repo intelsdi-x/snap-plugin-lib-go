@@ -27,76 +27,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
-	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
+	. "github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 const (
 	maxPingTimeoutLimit = 65535
-	tlsTestCA           = "libtest-CA"
-	tlsTestSrv          = "libtest-srv"
-	tlsTestCli          = "libtest-cli"
-	crtFileExt          = ".crt"
-	keyFileExt          = ".key"
-	badCrtFileExt       = "-BAD.crt"
 )
 
 var (
 	mockInputOutputInUse *mockInputOutput
-	testTLSSetupInUse    *testServerSetup
+	mockInputRootCerts   []string
 	prevPingTimeoutLimit int
 	grpcOptsBuilderInUse *grpcOptsBuilder
-	testFilesToRemove    []string
 )
-
-type testServerSetup struct {
-	prevServerSetup tlsServerSetup
-	caCertPath      string
-}
-
-func newTestServerSetup(prevServerSetup tlsServerSetup) *testServerSetup {
-	return &testServerSetup{prevServerSetup: prevServerSetup}
-}
-
-// makeTLSConfig implementation that supports injecting CA certificate for
-// verification of TLS client certs.
-func (m *testServerSetup) makeTLSConfig() *tls.Config {
-	tlsConfig := m.prevServerSetup.makeTLSConfig()
-	if m.caCertPath == "" {
-		return tlsConfig
-	}
-	b, err := ioutil.ReadFile(m.caCertPath)
-	if err != nil {
-		panic(err)
-	}
-	tlsConfig.ClientCAs = x509.NewCertPool()
-	tlsConfig.ClientCAs.AppendCertsFromPEM(b)
-	return tlsConfig
-}
-
-func (m *testServerSetup) readRootCAs() (*x509.CertPool, error) {
-	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-	return rootCAs, nil
-}
-
-func (m *testServerSetup) updateServerOptions(options ...grpc.ServerOption) []grpc.ServerOption {
-	opts := m.prevServerSetup.updateServerOptions(options...)
-	opts = append(opts, grpc.MaxConcurrentStreams(2))
-	return opts
-}
 
 type testProxyCtor struct {
 	prevProxyCtor    pluginProxyConstructor
@@ -175,15 +127,8 @@ func newGrpcOptsBuilder() *grpcOptsBuilder {
 	return &grpcOptsBuilder{}
 }
 
-func TestMain(m *testing.M) {
-	setUpTestMain()
-	retCode := m.Run()
-	tearDownTestMain()
-	os.Exit(retCode)
-}
-
 func TestIncorrectPluginArgsFail(t *testing.T) {
-	FocusConvey("Intending to start secure plugin server", t, func() {
+	Convey("Intending to start secure plugin server", t, func() {
 		setUpSecureTestcase(true, true)
 		Convey("omitting Cert Path from arguments will make plugin fail", func() {
 			mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
@@ -356,9 +301,36 @@ func TestTLSClientFailsAgainstInvalidServer(t *testing.T) {
 				tearDownSecureTestcase()
 			})
 		})
-		Convey("when plugin server is started without client CA cert", func() {
+		Convey("when plugin server is started with invalid client CA cert", func() {
+			mockInputRootCerts = []string{tlsTestCA + badCrtFileExt}
 			setUpSecureTestcase(true, true)
-			testTLSSetupInUse.caCertPath = tlsTestCA + badCrtFileExt
+			tt := startSecureGrpcPlugin(t, &mockPublisher{}, publisherType, "mock-pub")
+			Convey("secure client should fail to connect or ping", func() {
+				grpcOpts, err := grpcOptsBuilderInUse.build()
+				if err != nil {
+					panic(err)
+				}
+				So(func() {
+					tt.cc, err = grpcClientConn(tt.srvAddr, grpcOpts)
+					if err != nil {
+						panic(err)
+					}
+					cc := tt.clientConn()
+					tc := rpc.NewPublisherClient(cc)
+					_, err = tc.Ping(tt.ctx, &rpc.Empty{})
+					if err != nil {
+						panic(err)
+					}
+				}, ShouldPanic)
+			})
+			Reset(func() {
+				tt.tearDown()
+				tearDownSecureTestcase()
+			})
+		})
+		Convey("when plugin server is started without client CA cert", func() {
+			mockInputRootCerts = []string{""}
+			setUpSecureTestcase(true, true)
 			tt := startSecureGrpcPlugin(t, &mockPublisher{}, publisherType, "mock-pub")
 			Convey("secure client should fail to connect or ping", func() {
 				grpcOpts, err := grpcOptsBuilderInUse.build()
@@ -386,32 +358,22 @@ func TestTLSClientFailsAgainstInvalidServer(t *testing.T) {
 	})
 }
 
-func setUpTestMain() {
-	rand.Seed(time.Now().Unix())
-	if tlsTestFiles, err := buildTLSCerts(tlsTestCA, tlsTestSrv, tlsTestCli); err != nil {
-		panic(err)
-	} else {
-		testFilesToRemove = append(testFilesToRemove, tlsTestFiles...)
-	}
-}
-
-func tearDownTestMain() {
-	for _, fn := range testFilesToRemove {
-		os.Remove(fn)
-	}
-}
-
 func setUpSecureTestcase(serverTLSUp, clientTLSUp bool) {
 	mockInputOutputInUse = newMockInputOutput(libInputOutput)
 	libInputOutput = mockInputOutputInUse
-	testTLSSetupInUse = newTestServerSetup(tlsSetup)
-	tlsSetup = testTLSSetupInUse
 	grpcOptsBuilderInUse = newGrpcOptsBuilder()
 	if serverTLSUp {
+		rootCertPathsArg := ""
+		var certPaths string
+		if len(mockInputRootCerts) > 0 {
+			certPaths = strings.Join(mockInputRootCerts, string(filepath.ListSeparator))
+		} else {
+			certPaths = tlsTestCA + crtFileExt
+		}
+		rootCertPathsArg = fmt.Sprintf(`,"RootCertPaths":"%s"`, certPaths)
 		mockInputOutputInUse.mockArgs = strings.Fields(fmt.Sprintf(`mock
-			{"CertPath":"%s","KeyPath":"%s","TLSEnabled":true}`,
-			tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt))
-		testTLSSetupInUse.caCertPath = tlsTestCA + crtFileExt
+			{"CertPath":"%s","KeyPath":"%s","TLSEnabled":true%s}`,
+			tlsTestSrv+crtFileExt, tlsTestSrv+keyFileExt, rootCertPathsArg))
 	}
 	if clientTLSUp {
 		grpcOptsBuilderInUse.
@@ -422,8 +384,8 @@ func setUpSecureTestcase(serverTLSUp, clientTLSUp bool) {
 }
 
 func tearDownSecureTestcase() {
-	tlsSetup = testTLSSetupInUse.prevServerSetup
 	libInputOutput = mockInputOutputInUse.prevInputOutput
+	mockInputRootCerts = []string{}
 }
 
 func startSecureGrpcPlugin(t *testing.T, plugin Plugin, typeOfPlugin pluginType, pluginName string) *test {
@@ -494,60 +456,4 @@ func grpcClientConn(serverAddr string, grpcOpts []grpc.DialOption) (*grpc.Client
 		return nil, err
 	}
 	return conn, nil
-}
-
-// buildTLSCerts builds a set of certificates and private keys for testing TLS.
-// Generated files include: CA certificate, server certificate and private key,
-// client certificate and private key, and alternate (BAD) CA certificate.
-// Certificate and key files are named after given common names (e.g.: srvCN).
-func buildTLSCerts(caCN, srvCN, cliCN string) (resFiles []string, err error) {
-	ou := fmt.Sprintf("%06x", rand.Intn(1<<24))
-	u := &certTestUtil{}
-	caCertTpl, caCert, caPrivKey, err := u.makeCACertKeyPair(caCN, ou, defaultKeyValidPeriod)
-	if err != nil {
-		return nil, err
-	}
-	caCertFn := caCN + crtFileExt
-	if err := u.writePEMFile(caCertFn, certificatePEMHeader, caCert); err != nil {
-		return nil, err
-	}
-	resFiles = append(resFiles, caCertFn)
-	_, caBadCert, _, err := u.makeCACertKeyPair(caCN, ou, defaultKeyValidPeriod)
-	if err != nil {
-		return resFiles, err
-	}
-	badCaCertFn := caCN + badCrtFileExt
-	if err := u.writePEMFile(badCaCertFn, certificatePEMHeader, caBadCert); err != nil {
-		return resFiles, err
-	}
-	resFiles = append(resFiles, badCaCertFn)
-	srvCert, srvPrivKey, err := u.makeSubjCertKeyPair(srvCN, ou, defaultKeyValidPeriod, caCertTpl, caPrivKey)
-	if err != nil {
-		return resFiles, err
-	}
-	srvCertFn := srvCN + crtFileExt
-	srvKeyFn := srvCN + keyFileExt
-	if err := u.writePEMFile(srvCertFn, certificatePEMHeader, srvCert); err != nil {
-		return resFiles, err
-	}
-	resFiles = append(resFiles, srvCertFn)
-	if err := u.writePEMFile(srvKeyFn, rsaKeyPEMHeader, x509.MarshalPKCS1PrivateKey(srvPrivKey)); err != nil {
-		return resFiles, err
-	}
-	resFiles = append(resFiles, srvKeyFn)
-	cliCert, cliPrivKey, err := u.makeSubjCertKeyPair(cliCN, ou, defaultKeyValidPeriod, caCertTpl, caPrivKey)
-	if err != nil {
-		return resFiles, err
-	}
-	cliCertFn := cliCN + crtFileExt
-	cliKeyFn := cliCN + keyFileExt
-	if err := u.writePEMFile(cliCertFn, certificatePEMHeader, cliCert); err != nil {
-		return resFiles, err
-	}
-	resFiles = append(resFiles, cliCertFn)
-	if err := u.writePEMFile(cliKeyFn, rsaKeyPEMHeader, x509.MarshalPKCS1PrivateKey(cliPrivKey)); err != nil {
-		return resFiles, err
-	}
-	resFiles = append(resFiles, cliKeyFn)
-	return resFiles, nil
 }

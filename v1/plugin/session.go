@@ -37,6 +37,9 @@ type Arg struct {
 	// Path to TLS private key file for a TLS server
 	KeyPath string
 
+	// Paths to root certificates
+	RootCertPaths string
+
 	// Flag requesting server to establish TLS channel
 	TLSEnabled bool
 }
