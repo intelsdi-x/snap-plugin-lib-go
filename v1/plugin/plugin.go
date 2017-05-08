@@ -20,6 +20,7 @@ limitations under the License.
 package plugin
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -52,12 +53,12 @@ var (
 		version int
 		opts    []MetaOpt
 	}
-)
-
-func init() {
-	app = cli.NewApp()
-	app.Flags = []cli.Flag{
+	// Flags required by the plugin lib flags - plugin authors can provide their
+	// own flags.  Checkout https://github.com/intelsdi-x/snap-plugin-lib-go/blob/master/examples/snap-plugin-collector-rand/rand/rand.go
+	// for an example of a plugin adding a custom flag.
+	Flags []cli.Flag = []cli.Flag{
 		flConfig,
+		flAddr,
 		flPort,
 		flPprof,
 		flTLS,
@@ -67,16 +68,10 @@ func init() {
 		flStandAlone,
 		flHTTPPort,
 		flLogLevel,
+		flMaxCollectDuration,
+		flMaxMetricsBuffer,
 	}
-	app.Action = startPlugin
-}
-
-// AddFlag accepts a cli.Flag to the plugins standard flags.
-func AddFlag(flags ...cli.Flag) {
-	for _, f := range flags {
-		app.Flags = append(app.Flags, f)
-	}
-}
+)
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
 type Plugin interface {
@@ -130,7 +125,7 @@ type StreamCollector interface {
 	//
 	// A channel for error strings that the library will report to snap
 	// as task errors.
-	StreamMetrics(chan []Metric, chan []Metric, chan string) error
+	StreamMetrics(context.Context, chan []Metric, chan []Metric, chan string) error
 	GetMetricTypes(Config) ([]Metric, error)
 }
 
@@ -343,6 +338,10 @@ func buildGRPCServer(typeOfPlugin pluginType, name string, version int, arg *Arg
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt) int {
+	app = cli.NewApp()
+	app.Flags = Flags
+	app.Action = startPlugin
+
 	appArgs.plugin = plugin
 	appArgs.name = name
 	appArgs.version = version
@@ -363,6 +362,10 @@ func StartCollector(plugin Collector, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt) int {
+	app = cli.NewApp()
+	app.Flags = Flags
+	app.Action = startPlugin
+
 	appArgs.plugin = plugin
 	appArgs.name = name
 	appArgs.version = version
@@ -371,7 +374,9 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 	app.Usage = "a Snap processor"
 	err := app.Run(getOSArgs())
 	if err != nil {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"_block": "StartProcessor",
+		}).Error(err)
 		return 1
 	}
 	return 0
@@ -381,6 +386,10 @@ func StartProcessor(plugin Processor, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt) int {
+	app = cli.NewApp()
+	app.Flags = Flags
+	app.Action = startPlugin
+
 	appArgs.plugin = plugin
 	appArgs.name = name
 	appArgs.version = version
@@ -389,7 +398,9 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 	app.Usage = "a Snap publisher"
 	err := app.Run(getOSArgs())
 	if err != nil {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"_block": "StartPublisher",
+		}).Error(err)
 		return 1
 	}
 	return 0
@@ -399,6 +410,10 @@ func StartPublisher(plugin Publisher, name string, version int, opts ...MetaOpt)
 // generates a response for the initial stdin / stdout handshake, and starts
 // the plugin's gRPC server.
 func StartStreamCollector(plugin StreamCollector, name string, version int, opts ...MetaOpt) int {
+	app = cli.NewApp()
+	app.Flags = Flags
+	app.Action = startPlugin
+
 	appArgs.plugin = plugin
 	appArgs.name = name
 	appArgs.version = version
@@ -409,7 +424,9 @@ func StartStreamCollector(plugin StreamCollector, name string, version int, opts
 	app.Usage = "a Snap collector"
 	err := app.Run(getOSArgs())
 	if err != nil {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"_block": "StartStreamCollector",
+		}).Error(err)
 		return 1
 	}
 	return 0
@@ -430,9 +447,10 @@ type preamble struct {
 
 func startPlugin(c *cli.Context) error {
 	var (
-		server      *grpc.Server
-		meta        *meta
-		pluginProxy *pluginProxy
+		server           *grpc.Server
+		meta             *meta
+		pluginProxy      *pluginProxy
+		MaxMetricsBuffer int64
 	)
 	libInputOutput.setContext(c)
 	arg, err := processInput(c)
@@ -444,9 +462,10 @@ func startPlugin(c *cli.Context) error {
 	} else {
 		log.SetLevel(log.Level(arg.LogLevel))
 	}
-	logger := log.WithFields(log.Fields{
-		"_block": "startPlugin",
-	})
+	logger := log.WithFields(
+		log.Fields{
+			"_block": "startPlugin",
+		})
 	switch plugin := appArgs.plugin.(type) {
 	case Collector:
 		proxy := &collectorProxy{
@@ -482,14 +501,37 @@ func startPlugin(c *cli.Context) error {
 		}
 		rpc.RegisterPublisherServer(server, proxy)
 	case StreamCollector:
+		if c.IsSet("max-metrics-buffer") {
+			MaxMetricsBuffer = c.Int64("max-metrics-buffer")
+		} else {
+			MaxMetricsBuffer = defaultMaxMetricsBuffer
+		}
+
+		logger.WithFields(log.Fields{
+			"option": "max-metrics-buffer",
+			"value":  MaxMetricsBuffer,
+		}).Debug("setting max metrics buffer")
+
+		maxCollectDuration, err := time.ParseDuration(collectDurationStr)
+		if err != nil {
+			return err
+		}
+
+		logger.WithFields(log.Fields{
+			"option": "max-collect-duration",
+			"value":  maxCollectDuration,
+		}).Debug("setting max collect duration")
+
 		proxy := &StreamProxy{
 			plugin:             plugin,
+			ctx:                context.Background(),
 			pluginProxy:        *newPluginProxy(plugin),
-			maxCollectDuration: defaultMaxCollectDuration,
-			maxMetricsBuffer:   defaultMaxMetricsBuffer,
+			maxCollectDuration: maxCollectDuration,
+			maxMetricsBuffer:   MaxMetricsBuffer,
 		}
+
 		pluginProxy = &proxy.pluginProxy
-		server, meta, err = buildGRPCServer(collectorType, appArgs.name, appArgs.version, arg, appArgs.opts...)
+		server, meta, err = buildGRPCServer(streamCollectorType, appArgs.name, appArgs.version, arg, appArgs.opts...)
 		if err != nil {
 			return cli.NewExitError(err, 2)
 		}
@@ -502,7 +544,6 @@ func startPlugin(c *cli.Context) error {
 		httpPort := c.Int("stand-alone-port")
 		preamble, err := printPreambleAndServe(server, meta, pluginProxy, arg.ListenPort, arg.Pprof)
 		if err != nil {
-			log.Error(err)
 			return err
 		}
 
@@ -567,13 +608,13 @@ func startPlugin(c *cli.Context) error {
 }
 
 func printPreambleAndServe(srv server, m *meta, p *pluginProxy, port string, isPprof bool) (string, error) {
-	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%v", ListenAddr, port))
 	if err != nil {
 		return "", err
 	}
 	l.Close()
 
-	addr := fmt.Sprintf("127.0.0.1:%v", l.Addr().(*net.TCPAddr).Port)
+	addr := fmt.Sprintf("%s:%v", ListenAddr, l.Addr().(*net.TCPAddr).Port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return "", err
@@ -591,9 +632,13 @@ func printPreambleAndServe(srv server, m *meta, p *pluginProxy, port string, isP
 			return "", err
 		}
 	}
+	advertisedAddr, err := getAddr(ListenAddr)
+	if err != nil {
+		return "", err
+	}
 	resp := preamble{
 		Meta:          *m,
-		ListenAddress: addr,
+		ListenAddress: fmt.Sprintf("%v:%v", advertisedAddr, l.Addr().(*net.TCPAddr).Port),
 		Type:          m.Type,
 		PprofAddress:  pprofAddr,
 		State:         0, // Hardcode success since panics on err
@@ -604,6 +649,26 @@ func printPreambleAndServe(srv server, m *meta, p *pluginProxy, port string, isP
 	}
 
 	return string(preambleJSON), nil
+}
+
+// getAddr if we were provided the addr 0.0.0.0 we need to determine the
+// address we will advertise to the framework in the preamble.
+func getAddr(addr string) (string, error) {
+	if strings.Compare(addr, "0.0.0.0") == 0 {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			return "", err
+		}
+		for _, address := range addrs {
+			// check the address type and if it is not a loopback the display it
+			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					return ipnet.IP.String(), nil
+				}
+			}
+		}
+	}
+	return addr, nil
 }
 
 func showDiagnostics(m meta, p *pluginProxy, c Config) error {
@@ -907,5 +972,14 @@ func processInput(c *cli.Context) (*Arg, error) {
 	if c.IsSet("tls") {
 		arg.TLSEnabled = true
 	}
+
+	if c.IsSet("max-collect-duration") {
+		arg.MaxCollectDuration = c.String("max-collect-duration")
+	}
+
+	if c.IsSet("max-metrics-buffer") {
+		arg.MaxMetricsBuffer = c.Int64("max-metrics-buffer")
+	}
+
 	return processArg(arg)
 }

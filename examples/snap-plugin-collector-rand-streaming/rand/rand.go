@@ -20,6 +20,7 @@ limitations under the License.
 package rand
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -69,13 +70,13 @@ type RandCollector struct {
 // The metrics_out channel is used by the plugin to send the collected metrics
 // to Snap.
 func (r *RandCollector) StreamMetrics(
+	ctx context.Context,
 	metrics_in chan []plugin.Metric,
 	metrics_out chan []plugin.Metric,
 	err chan string) error {
 
 	go r.streamIt(metrics_out, err)
-	go r.drainMetrics(metrics_in)
-
+	r.drainMetrics(metrics_in)
 	return nil
 }
 
@@ -125,7 +126,7 @@ func (r *RandCollector) streamIt(ch chan []plugin.Metric, err chan string) {
 			}
 		}
 		ch <- metrics
-		time.Sleep(time.Second * time.Duration(rand.Int63n(10)))
+		time.Sleep(time.Millisecond * time.Duration(rand.Int63n(1000)))
 	}
 }
 
