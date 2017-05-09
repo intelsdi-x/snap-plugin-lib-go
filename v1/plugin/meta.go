@@ -75,7 +75,7 @@ func CacheTTL(t time.Duration) MetaOpt {
 // metaRPCType sets the metaRPCType for the meta object. Used only internally.
 func rpcType(typ metaRPCType) MetaOpt {
 	return func(m *meta) {
-		m.RPCType = int(typ)
+		m.RPCType = typ
 	}
 }
 
@@ -94,13 +94,24 @@ const (
 	gRPCStream             = 3
 )
 
+func (t metaRPCType) String() string {
+	switch t {
+	case gRPC:
+		return "gRPC"
+	case gRPCStream:
+		return "streaming gRPC"
+	default:
+		return "unknown"
+	}
+}
+
 // meta is the metadata for a plugin
 type meta struct {
 	// A plugin's unique identifier is type:name:version.
 	Type       pluginType
 	Name       string
 	Version    int
-	RPCType    int
+	RPCType    metaRPCType
 	RPCVersion int
 
 	ConcurrencyCount int
@@ -122,8 +133,8 @@ func newMeta(plType pluginType, name string, version int, opts ...MetaOpt) *meta
 		Type:             plType,
 		ConcurrencyCount: defaultConcurrencyCount,
 		RoutingStrategy:  LRURouter,
-		RPCType:          2, // GRPC type
-		RPCVersion:       1, // This is v1 lib
+		RPCType:          gRPC, // GRPC type
+		RPCVersion:       1,    // This is v1 lib
 		// Unsecure is a legacy value not used for grpc, but needed to avoid
 		// calling SetKey needlessly.
 		Unsecure: true,

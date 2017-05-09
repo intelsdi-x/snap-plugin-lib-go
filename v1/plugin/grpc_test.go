@@ -24,6 +24,7 @@ package plugin
 import (
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -36,6 +37,19 @@ import (
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+func init() {
+	// Filter out go test flags
+	getOSArgs = func() []string {
+		args := []string{}
+		for _, v := range os.Args {
+			if !strings.HasPrefix(v, "-test") {
+				args = append(args, v)
+			}
+		}
+		return args
+	}
+}
 
 const GrpcTimeoutDefault = 2 * time.Second
 
