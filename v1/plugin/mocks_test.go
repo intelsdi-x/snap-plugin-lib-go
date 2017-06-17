@@ -22,6 +22,7 @@ limitations under the License.
 package plugin
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -123,7 +124,7 @@ func (mc *mockStreamer) GetMetricTypes(cfg Config) ([]Metric, error) {
 	return mts, nil
 }
 
-func (mc *mockStreamer) StreamMetrics(i chan []Metric, o chan []Metric, _ chan string) error {
+func (mc *mockStreamer) StreamMetrics(ctx context.Context, i chan []Metric, o chan []Metric, _ chan string) error {
 
 	if mc.err != nil {
 		return errors.New("error")

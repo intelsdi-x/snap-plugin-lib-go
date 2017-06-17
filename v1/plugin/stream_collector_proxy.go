@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
 )
 
@@ -18,6 +19,7 @@ const (
 type StreamProxy struct {
 	pluginProxy
 	plugin StreamCollector
+	ctx    context.Context
 
 	// maxMetricsBuffer is the maximum number of metrics the plugin is buffering before sending metrics.
 	// Defaults to zero what means send metrics immediately.
@@ -49,6 +51,11 @@ func (p *StreamProxy) GetMetricTypes(ctx context.Context, arg *rpc.GetMetricType
 }
 
 func (p *StreamProxy) StreamMetrics(stream rpc.StreamCollector_StreamMetricsServer) error {
+	log.WithFields(
+		log.Fields{
+			"_block": "StreamMetrics",
+		},
+	).Debug("streaming started")
 	if stream == nil {
 		return errors.New("Stream metrics server is nil")
 	}
@@ -60,37 +67,41 @@ func (p *StreamProxy) StreamMetrics(stream rpc.StreamCollector_StreamMetricsServ
 	inChan := make(chan []Metric)
 	// Metrics out of the plugin into snap.
 	outChan := make(chan []Metric)
-
-	err := p.plugin.StreamMetrics(inChan, outChan, errChan)
-	if err != nil {
-		return err
-	}
+	// context for communicating that the stream has been closed to the plugin author
 
 	go p.metricSend(outChan, stream)
 	go p.errorSend(errChan, stream)
-	p.streamRecv(inChan, stream)
+	go p.streamRecv(inChan, stream)
 
-	return nil
-}
+	return p.plugin.StreamMetrics(stream.Context(), inChan, outChan, errChan)
 
-func (p *StreamProxy) SetConfig(context.Context, *rpc.ConfigMap) (*rpc.ErrReply, error) {
-	return nil, nil
 }
 
 func (p *StreamProxy) errorSend(errChan chan string, stream rpc.StreamCollector_StreamMetricsServer) {
-	for r := range errChan {
-		reply := &rpc.CollectReply{
-			Error: &rpc.ErrReply{Error: r},
-		}
-		if err := stream.Send(reply); err != nil {
-			fmt.Println(err.Error())
+	for {
+		select {
+		case <-stream.Context().Done():
+			return
+		case r := <-errChan:
+			reply := &rpc.CollectReply{
+				Error: &rpc.ErrReply{Error: r},
+			}
+			if err := stream.Send(reply); err != nil {
+				fmt.Println(err.Error())
+			}
 		}
 	}
 }
 
 func (p *StreamProxy) metricSend(ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+	log.WithFields(
+		log.Fields{
+			"_block": "metricSend",
+		},
+	).Debug("sending metrics")
 	metrics := []*rpc.Metric{}
 
+	afterCollectDuration := time.After(p.maxCollectDuration)
 	for {
 		select {
 		case mts := <-ch:
@@ -118,38 +129,63 @@ func (p *StreamProxy) metricSend(ch chan []Metric, stream rpc.StreamCollector_St
 			if p.maxMetricsBuffer == 0 {
 				sendReply(metrics, stream)
 				metrics = []*rpc.Metric{}
+				afterCollectDuration = time.After(p.maxCollectDuration)
 			}
-		case <-time.After(p.maxCollectDuration):
+
+		case <-afterCollectDuration:
 			// send metrics if maxCollectDuration is reached
 			sendReply(metrics, stream)
 			metrics = []*rpc.Metric{}
-
+			afterCollectDuration = time.After(p.maxCollectDuration)
+		case <-stream.Context().Done():
+			return
 		}
 	}
 }
 
 func (p *StreamProxy) streamRecv(ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+	logger := log.WithFields(
+		log.Fields{
+			"_block": "streamRecv",
+		},
+	)
+	logger.Debug("receiving metrics")
 	for {
-		s, err := stream.Recv()
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		if s != nil {
-			if s.MaxMetricsBuffer > 0 {
-				p.setMaxMetricsBuffer(s.MaxMetricsBuffer)
+		select {
+		case <-stream.Context().Done():
+			close(ch)
+			return
+		default:
+
+			s, err := stream.Recv()
+			if err != nil {
+				logger.Error(err)
+				break
 			}
-			if s.MaxCollectDuration > 0 {
-				p.setMaxCollectDuration(time.Duration(s.MaxCollectDuration))
-			}
-			if s.Metrics_Arg != nil {
-				metrics := []Metric{}
-				for _, mt := range s.Metrics_Arg.Metrics {
-					metric := fromProtoMetric(mt)
-					metrics = append(metrics, metric)
+			if s != nil {
+				if s.MaxMetricsBuffer > 0 {
+					logger.WithFields(log.Fields{
+						"option": "max-metrics-buffer",
+						"value":  s.MaxMetricsBuffer,
+					}).Debug("setting max metrics buffer option")
+					p.setMaxMetricsBuffer(s.MaxMetricsBuffer)
 				}
-				// send requested metrics to be collected into the stream plugin
-				ch <- metrics
+				if s.MaxCollectDuration > 0 {
+					logger.WithFields(log.Fields{
+						"option": "max-collect-duration",
+						"value":  fmt.Sprintf("%v seconds", time.Duration(s.MaxCollectDuration).Seconds()),
+					}).Debug("setting max collect duration option")
+					p.setMaxCollectDuration(time.Duration(s.MaxCollectDuration))
+				}
+				if s.Metrics_Arg != nil {
+					metrics := []Metric{}
+					for _, mt := range s.Metrics_Arg.Metrics {
+						metric := fromProtoMetric(mt)
+						metrics = append(metrics, metric)
+					}
+					// send requested metrics to be collected into the stream plugin
+					ch <- metrics
+				}
 			}
 		}
 	}
@@ -174,6 +210,10 @@ func sendReply(metrics []*rpc.Metric, stream rpc.StreamCollector_StreamMetricsSe
 	}
 
 	if err := stream.Send(reply); err != nil {
-		fmt.Println(err.Error())
+		log.WithFields(
+			log.Fields{
+				"_block": "streamRecv",
+			},
+		).Error(err)
 	}
 }

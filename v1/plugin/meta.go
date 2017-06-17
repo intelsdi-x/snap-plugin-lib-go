@@ -85,6 +85,7 @@ const (
 	collectorType pluginType = iota
 	processorType
 	publisherType
+	streamCollectorType
 )
 
 type metaRPCType int

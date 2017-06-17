@@ -64,14 +64,12 @@ func init() {
 	//When the flag is set, an additional policy will be added in GetConfigPolicy().
 	//This additional policy has a required field. This simulates
 	//the situation when a plugin requires a config to load.
-	plugin.AddFlag(
-		cli.BoolFlag{
-			Name:        "required-config",
-			Hidden:      false,
-			Usage:       "Plugin requires config passed in",
-			Destination: &req,
-		},
-	)
+	plugin.Flags = append(plugin.Flags, cli.BoolFlag{
+		Name:        "required-config",
+		Hidden:      false,
+		Usage:       "Plugin requires config passed in",
+		Destination: &req,
+	})
 }
 
 // Mock collector implementation used for testing

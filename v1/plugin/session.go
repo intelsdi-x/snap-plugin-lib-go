@@ -37,6 +37,9 @@ type Arg struct {
 
 	// Flag requesting server to establish TLS channel
 	TLSEnabled bool
+
+	MaxCollectDuration string
+	MaxMetricsBuffer   int64
 }
 
 // processArg is provided *Arg and returns *Arg after unmarshaling the first command line argument which is expected to be valid JSON.

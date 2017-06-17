@@ -19,10 +19,22 @@ var (
 		Name:  "port",
 		Usage: "port GRPC will listen on",
 	}
+	// ListenAddr the address that GRPC will listen on.  Plugin authors can also
+	// use this address if their plugin binds to a local port as it's sometimes
+	// needed to bind to a public interface.
+	ListenAddr = "127.0.0.1"
+	flAddr     = cli.StringFlag{
+		Name:        "addr",
+		Usage:       "addr GRPC will listen on",
+		Value:       ListenAddr,
+		Destination: &ListenAddr,
+	}
+	LogLevel   = 2
 	flLogLevel = cli.IntFlag{
-		Name:  "log-level",
-		Usage: "log level - 0:panic 1:fatal 2:error 3:warn 4:info 5:debug",
-		Value: 2,
+		Name:        "log-level",
+		Usage:       "log level - 0:panic 1:fatal 2:error 3:warn 4:info 5:debug",
+		Value:       LogLevel,
+		Destination: &LogLevel,
 	}
 	flPprof = cli.BoolFlag{
 		Name:  "pprof",
@@ -51,6 +63,18 @@ var (
 	flHTTPPort = cli.IntFlag{
 		Name:  "stand-alone-port",
 		Usage: "specify http port when stand-alone is set",
-		Value: 8181,
+		Value: 8182,
+	}
+	collectDurationStr   = "5s"
+	flMaxCollectDuration = cli.StringFlag{
+		Name:        "max-collect-duration",
+		Usage:       "sets the maximum duration (always greater than 0s) between collections before metrics are sent. Defaults to 10s what means that after 10 seconds no new metrics are received, the plugin should send whatever data it has in the buffer instead of waiting longer. (e.g. 5s)",
+		Value:       collectDurationStr,
+		Destination: &collectDurationStr,
+	}
+
+	flMaxMetricsBuffer = cli.Int64Flag{
+		Name:  "max-metrics-buffer",
+		Usage: "maximum number of metrics the plugin is buffering before sending metrics. Defaults to zero what means send metrics immediately.",
 	}
 )
