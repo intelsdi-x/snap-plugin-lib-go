@@ -146,7 +146,6 @@ func (RandCollector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 	for _, val := range vals {
 		metric := plugin.Metric{
 			Namespace: plugin.NewNamespace("random", val),
-			Version:   1,
 		}
 		metrics = append(metrics, metric)
 	}
