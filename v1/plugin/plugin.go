@@ -317,7 +317,10 @@ func applySecurityArgsToMeta(m *meta, args *Arg) error {
 // buildGRPCServer configures and builds GRPC server ready to server a plugin
 // instance
 func buildGRPCServer(typeOfPlugin pluginType, name string, version int, arg *Arg, opts ...MetaOpt) (server *grpc.Server, m *meta, err error) {
+	var grpcOptions []grpc.ServerOption
+
 	m = newMeta(typeOfPlugin, name, version, opts...)
+	grpcOptions = append(grpcOptions, m.grpcServerOptions...)
 
 	if err := applySecurityArgsToMeta(m, arg); err != nil {
 		return nil, nil, err
@@ -327,10 +330,9 @@ func buildGRPCServer(typeOfPlugin pluginType, name string, version int, arg *Arg
 		return nil, nil, err
 	}
 	if m.TLSEnabled {
-		server = grpc.NewServer(tlsSetup.updateServerOptions(grpc.Creds(creds))...)
-	} else {
-		server = grpc.NewServer(tlsSetup.updateServerOptions()...)
-	}
+		grpcOptions = append(grpcOptions, grpc.Creds(creds))
+	} 
+	server = grpc.NewServer(tlsSetup.updateServerOptions(grpcOptions...)...)
 	return server, m, nil
 }
 
