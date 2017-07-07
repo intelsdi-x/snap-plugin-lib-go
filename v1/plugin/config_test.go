@@ -83,6 +83,72 @@ func TestConfig(t *testing.T) {
 			})
 		}
 	})
+	Convey("Test Config applies defaults from config policy", t, func() {
+		// create config policy
+		mockPolicy := NewConfigPolicy()
+		// string rule
+		mockPolicy.AddNewStringRule([]string{"static", "string"},
+			"teststr",
+			false,
+			SetDefaultString("some_str"))
+		// integer rule
+		mockPolicy.AddNewIntRule([]string{"random", "integer"},
+			"testint",
+			false,
+			SetDefaultInt(10))
+		// float rule
+		mockPolicy.AddNewFloatRule([]string{"random", "float"},
+			"testfloat",
+			false,
+			SetDefaultFloat(11.1))
+		// boolean rule
+		mockPolicy.AddNewBoolRule([]string{"random"},
+			"testbool",
+			false,
+			SetDefaultBool(true))
+
+		Convey("apply defaults from config policy", func() {
+			Convey("when a given config is empty", func() {
+				// create a new config
+				config := NewConfig()
+				So(config, ShouldBeEmpty)
+				// update config with defaults from config policy
+				config.applyDefaults(*mockPolicy)
+				So(config, ShouldNotBeEmpty)
+				// 4 configs are expected (`teststr`, `testint`, `testfloat`, `testbool`)
+				So(len(config), ShouldEqual, 4)
+				Convey("validate  config values", func() {
+					So(config["teststr"], ShouldEqual, "some_str")
+					So(config["testint"], ShouldEqual, 10)
+					So(config["testfloat"], ShouldEqual, 11.1)
+					So(config["testbool"], ShouldEqual, true)
+				})
+			})
+			Convey("when a given config overwrite defaults", func() {
+				// create a config (non-empty) with provided values different than defaults
+				config := Config{
+					"teststr":    "some_str2",
+					"testint":    int64(123),
+					"testfloat":  32.5,
+					"anotherstr": "another_str",
+				}
+				So(config, ShouldNotBeEmpty)
+				// 4 configs are given (`teststr`, `testint`, `testfloat`, `anotherstr`)
+				So(len(config), ShouldEqual, 4)
+				// update config with defaults from config policy
+				config.applyDefaults(*mockPolicy)
+				// 5 configs are expected after merging with defaults (including `testbool`)
+				So(len(config), ShouldEqual, 5)
+				Convey("validate  config values", func() {
+					So(config["teststr"], ShouldEqual, "some_str2")
+					So(config["anotherstr"], ShouldEqual, "another_str")
+					So(config["testint"], ShouldEqual, 123)
+					So(config["testfloat"], ShouldEqual, 32.5)
+					So(config["testbool"], ShouldEqual, true)
+				})
+			})
+		})
+	})
 }
 
 type mockConfig struct {

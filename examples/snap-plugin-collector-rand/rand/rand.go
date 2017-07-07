@@ -181,7 +181,6 @@ func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 			true,
 		)
 	}
-
 	policy.AddNewIntRule([]string{"random", "integer"},
 		"testint",
 		false,
@@ -196,7 +195,8 @@ func (RandCollector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 
 	policy.AddNewStringRule([]string{"random", "string"},
 		"teststring",
-		false)
+		false,
+		plugin.SetDefaultString("some_string"))
 
 	policy.AddNewBoolRule([]string{"random"},
 		"testbool",

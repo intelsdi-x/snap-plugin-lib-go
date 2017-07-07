@@ -114,6 +114,20 @@ func TestConfigPolicy(t *testing.T) {
 				}
 			})
 		}
+		Convey("Test Config Policy getting defaults", func() {
+			// get config policy defaults
+			cfg := p.getDefaults()
+			So(cfg, ShouldNotBeEmpty)
+			So(cfg["StringWithDefault"], ShouldEqual, "sss")
+			So(cfg["boolRequired"], ShouldEqual, true)
+			So(cfg["float"], ShouldEqual, 12.1)
+			So(cfg["integer"], ShouldEqual, 12)
+
+			Convey("config rules without default should be skipped", func() {
+				_, exist := cfg["StringWithoutDefault"]
+				So(exist, ShouldBeFalse)
+			})
+		})
 	})
 }
 

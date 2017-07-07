@@ -582,7 +582,7 @@ func startPlugin(c *cli.Context) error {
 
 	} else {
 		// no arguments provided - run and display diagnostics to the user
-		var config Config
+		config := NewConfig()
 		if c.IsSet("config") {
 			err := json.Unmarshal([]byte(c.String("config")), &config)
 			if err != nil {
@@ -592,6 +592,16 @@ func startPlugin(c *cli.Context) error {
 				return err
 			}
 		}
+		// Get plugin config policy
+		cPolicy, err := pluginProxy.plugin.GetConfigPolicy()
+		if err != nil {
+			logger.WithFields(log.Fields{
+				"err": err,
+			}).Errorf("cannot get config policy")
+			return err
+		}
+		// Update config with defaults from config policy
+		config.applyDefaults(cPolicy)
 
 		switch pluginProxy.plugin.(type) {
 		case Collector:
@@ -826,47 +836,42 @@ func checkForMissingRequirements(vals []string, name string, conf Config) (requi
 }
 
 func printConfigPolicyStringRules(cPolicy ConfigPolicy, conf Config, w *tabwriter.Writer) (requiredConfigs string) {
-	if len(cPolicy.stringRules) > 0 {
-		for ns, v := range cPolicy.stringRules {
-			for key, val := range v.Rules {
-				defaultValue := ""
-				if val.HasDefault {
-					defaultValue = val.Default
-				}
-				if val.String() != "" {
-					vals := strings.Fields(val.String())
-					req, min, max := parseString(vals, ns, conf)
-					printFields(w, false, 0, ns, key, "string", req, defaultValue, min, max)
+	for ns, v := range cPolicy.stringRules {
+		for key, val := range v.Rules {
+			defaultValue := ""
+			if val.HasDefault {
+				defaultValue = val.Default
+			}
+			if val.String() != "" {
+				vals := strings.Fields(val.String())
+				req, min, max := parseString(vals, ns, conf)
+				printFields(w, false, 0, ns, key, "string", req, defaultValue, min, max)
 
-					requiredConfigs += checkForMissingRequirements(vals, key, conf)
-				} else {
-					printFields(w, false, 0, ns, key, "string", "false", defaultValue, "", "")
-				}
+				requiredConfigs += checkForMissingRequirements(vals, key, conf)
+			} else {
+				printFields(w, false, 0, ns, key, "string", "false", defaultValue, "", "")
 			}
 		}
 	}
-
 	return requiredConfigs
 }
 
 func printConfigPolicyIntegerRules(cPolicy ConfigPolicy, conf Config, w *tabwriter.Writer) (requiredConfigs string) {
-	if len(cPolicy.integerRules) > 0 {
-		for k, v := range cPolicy.integerRules {
-			for key, val := range v.Rules {
-				defaultValue := ""
-				if val.HasDefault {
-					defaultValue = strconv.FormatInt(val.Default, 10)
-				}
-				if val.String() != "" {
-					//parse info:
-					vals := strings.Fields(val.String())
-					req, min, max := parseString(vals, k, conf)
-					printFields(w, false, 0, k, key, "integer", req, defaultValue, min, max)
+	for k, v := range cPolicy.integerRules {
+		for key, val := range v.Rules {
+			defaultValue := ""
+			if val.HasDefault {
+				defaultValue = strconv.FormatInt(val.Default, 10)
+			}
+			if val.String() != "" {
+				//parse info:
+				vals := strings.Fields(val.String())
+				req, min, max := parseString(vals, k, conf)
+				printFields(w, false, 0, k, key, "integer", req, defaultValue, min, max)
 
-					requiredConfigs += checkForMissingRequirements(vals, key, conf)
-				} else {
-					printFields(w, false, 0, k, key, "integer", "false", defaultValue, "", "")
-				}
+				requiredConfigs += checkForMissingRequirements(vals, key, conf)
+			} else {
+				printFields(w, false, 0, k, key, "integer", "false", defaultValue, "", "")
 			}
 		}
 	}
@@ -874,23 +879,21 @@ func printConfigPolicyIntegerRules(cPolicy ConfigPolicy, conf Config, w *tabwrit
 }
 
 func printConfigPolicyFloatRules(cPolicy ConfigPolicy, conf Config, w *tabwriter.Writer) (requiredConfigs string) {
-	if len(cPolicy.floatRules) > 0 {
-		for k, v := range cPolicy.floatRules {
-			for key, val := range v.Rules {
-				defaultValue := ""
-				if val.HasDefault {
-					defaultValue = strconv.FormatFloat(val.Default, 'f', -1, 64)
-				}
-				if val.String() != "" {
-					//parse info:
-					vals := strings.Fields(val.String())
-					req, min, max := parseString(vals, k, conf)
-					printFields(w, false, 0, k, key, "float", req, defaultValue, min, max)
+	for k, v := range cPolicy.floatRules {
+		for key, val := range v.Rules {
+			defaultValue := ""
+			if val.HasDefault {
+				defaultValue = strconv.FormatFloat(val.Default, 'f', -1, 64)
+			}
+			if val.String() != "" {
+				//parse info:
+				vals := strings.Fields(val.String())
+				req, min, max := parseString(vals, k, conf)
+				printFields(w, false, 0, k, key, "float", req, defaultValue, min, max)
 
-					requiredConfigs += checkForMissingRequirements(vals, key, conf)
-				} else {
-					printFields(w, false, 0, k, key, "float", "false", defaultValue, "", "")
-				}
+				requiredConfigs += checkForMissingRequirements(vals, key, conf)
+			} else {
+				printFields(w, false, 0, k, key, "float", "false", defaultValue, "", "")
 			}
 		}
 	}
@@ -898,23 +901,21 @@ func printConfigPolicyFloatRules(cPolicy ConfigPolicy, conf Config, w *tabwriter
 }
 
 func printConfigPolicyBoolRules(cPolicy ConfigPolicy, conf Config, w *tabwriter.Writer) (requiredConfigs string) {
-	if len(cPolicy.boolRules) > 0 {
-		for k, v := range cPolicy.boolRules {
-			for key, val := range v.Rules {
-				defaultValue := ""
-				if val.HasDefault {
-					defaultValue = strconv.FormatBool(val.Default)
-				}
-				if val.String() != "" {
-					//parse info:
-					vals := strings.Fields(val.String())
-					req, min, max := parseString(vals, k, conf)
-					printFields(w, false, 0, k, key, "bool", req, defaultValue, min, max)
+	for k, v := range cPolicy.boolRules {
+		for key, val := range v.Rules {
+			defaultValue := ""
+			if val.HasDefault {
+				defaultValue = strconv.FormatBool(val.Default)
+			}
+			if val.String() != "" {
+				//parse info:
+				vals := strings.Fields(val.String())
+				req, min, max := parseString(vals, k, conf)
+				printFields(w, false, 0, k, key, "bool", req, defaultValue, min, max)
 
-					requiredConfigs += checkForMissingRequirements(vals, key, conf)
-				} else {
-					printFields(w, false, 0, k, key, "bool", "false", defaultValue, "", "")
-				}
+				requiredConfigs += checkForMissingRequirements(vals, key, conf)
+			} else {
+				printFields(w, false, 0, k, key, "bool", "false", defaultValue, "", "")
 			}
 		}
 	}
