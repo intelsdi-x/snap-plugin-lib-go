@@ -110,7 +110,9 @@ func newMockStreamerStream(action func(chan []Metric, time.Duration, []Metric)) 
 }
 
 func (mc *mockStreamer) doAction(t time.Duration, mts []Metric) {
-	go mc.action(mc.outMetric, t, mts)
+	go func() {
+		mc.action(mc.outMetric, t, mts)
+	}()
 }
 func (mc *mockStreamer) GetMetricTypes(cfg Config) ([]Metric, error) {
 	if mc.err != nil {

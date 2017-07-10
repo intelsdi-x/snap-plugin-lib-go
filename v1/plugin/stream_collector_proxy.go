@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	"golang.org/x/net/context"
 
 	log "github.com/Sirupsen/logrus"
@@ -29,6 +31,10 @@ type StreamProxy struct {
 	// Defaults to 10s what means that after 10 seconds no new metrics are received, the plugin should send
 	// whatever data it has in the buffer instead of waiting longer.
 	maxCollectDuration time.Duration
+
+	sendChan chan []Metric
+	recvChan chan []Metric
+	errChan  chan string
 }
 
 func (p *StreamProxy) GetMetricTypes(ctx context.Context, arg *rpc.GetMetricTypesArg) (*rpc.MetricsReply, error) {
@@ -62,18 +68,32 @@ func (p *StreamProxy) StreamMetrics(stream rpc.StreamCollector_StreamMetricsServ
 
 	// Error channel where we will forward plugin errors to snap where it
 	// can report/handle them.
-	errChan := make(chan string)
+	p.errChan = make(chan string)
 	// Metrics into the plugin from snap.
-	inChan := make(chan []Metric)
+	p.recvChan = make(chan []Metric)
 	// Metrics out of the plugin into snap.
-	outChan := make(chan []Metric)
+	p.sendChan = make(chan []Metric)
 	// context for communicating that the stream has been closed to the plugin author
 
-	go p.metricSend(outChan, stream)
-	go p.errorSend(errChan, stream)
-	go p.streamRecv(inChan, stream)
+	md, ok := metadata.FromIncomingContext(stream.Context())
+	if !ok {
+		log.Debug("No metadata")
+	}
 
-	return p.plugin.StreamMetrics(stream.Context(), inChan, outChan, errChan)
+	taskID := "not-set"
+	if tempVal, ok := md["task-id"]; ok {
+		if len(tempVal) == 1 {
+			taskID = tempVal[0]
+		} else {
+			log.Debug("Skipping assignment of metadata")
+		}
+	}
+
+	go p.metricSend(taskID, p.sendChan, stream)
+	go p.errorSend(p.errChan, stream)
+	go p.streamRecv(taskID, p.recvChan, stream)
+
+	return p.plugin.StreamMetrics(stream.Context(), p.recvChan, p.sendChan, p.errChan)
 
 }
 
@@ -93,12 +113,15 @@ func (p *StreamProxy) errorSend(errChan chan string, stream rpc.StreamCollector_
 	}
 }
 
-func (p *StreamProxy) metricSend(ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
 	log.WithFields(
 		log.Fields{
-			"_block": "metricSend",
+			"_block":             "metricSend",
+			"task-id":            taskID,
+			"maxMetricsBuffer":   p.maxMetricsBuffer,
+			"maxCollectDuration": p.maxCollectDuration,
 		},
-	).Debug("sending metrics")
+	).Debug("starting routine for sending metrics")
 	metrics := []*rpc.Metric{}
 
 	afterCollectDuration := time.After(p.maxCollectDuration)
@@ -120,21 +143,21 @@ func (p *StreamProxy) metricSend(ch chan []Metric, stream rpc.StreamCollector_St
 				// send metrics if maxMetricsBuffer is reached
 				// (notice it is only possible for maxMetricsBuffer greater than 0)
 				if p.maxMetricsBuffer == int64(len(metrics)) {
-					sendReply(metrics, stream)
+					sendReply(taskID, metrics, stream)
 					metrics = []*rpc.Metric{}
 				}
 			}
 
 			// send all available metrics immediately for maxMetricsBuffer is 0 (defaults)
 			if p.maxMetricsBuffer == 0 {
-				sendReply(metrics, stream)
+				sendReply(taskID, metrics, stream)
 				metrics = []*rpc.Metric{}
 				afterCollectDuration = time.After(p.maxCollectDuration)
 			}
 
 		case <-afterCollectDuration:
 			// send metrics if maxCollectDuration is reached
-			sendReply(metrics, stream)
+			sendReply(taskID, metrics, stream)
 			metrics = []*rpc.Metric{}
 			afterCollectDuration = time.After(p.maxCollectDuration)
 		case <-stream.Context().Done():
@@ -143,13 +166,14 @@ func (p *StreamProxy) metricSend(ch chan []Metric, stream rpc.StreamCollector_St
 	}
 }
 
-func (p *StreamProxy) streamRecv(ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+func (p *StreamProxy) streamRecv(taskID string, ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
 	logger := log.WithFields(
 		log.Fields{
-			"_block": "streamRecv",
+			"_block":  "streamRecv",
+			"task-id": taskID,
 		},
 	)
-	logger.Debug("receiving metrics")
+	logger.Debug("starting routine for receiving metrics")
 	for {
 		select {
 		case <-stream.Context().Done():
@@ -199,9 +223,15 @@ func (p *StreamProxy) setMaxMetricsBuffer(i int64) {
 	p.maxMetricsBuffer = i
 }
 
-func sendReply(metrics []*rpc.Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+func sendReply(taskID string, metrics []*rpc.Metric, stream rpc.StreamCollector_StreamMetricsServer) {
+	logger := log.WithFields(
+		log.Fields{
+			"_block":  "sendReply",
+			"task-id": taskID,
+		},
+	)
 	if len(metrics) == 0 {
-		fmt.Println("No metrics available to send")
+		logger.Debug("No metrics available to send")
 		return
 	}
 
@@ -210,10 +240,12 @@ func sendReply(metrics []*rpc.Metric, stream rpc.StreamCollector_StreamMetricsSe
 	}
 
 	if err := stream.Send(reply); err != nil {
-		log.WithFields(
-			log.Fields{
-				"_block": "streamRecv",
-			},
-		).Error(err)
+		logger.Error(err)
 	}
+
+	logger.WithFields(
+		log.Fields{
+			"count": len(metrics),
+		},
+	).Debug("sending metrics")
 }

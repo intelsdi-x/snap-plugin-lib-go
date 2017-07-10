@@ -68,9 +68,7 @@ func TestStreamMetrics(t *testing.T) {
 				maxCollectDuration: defaultMaxCollectDuration,
 			}
 			errChan := make(chan string)
-			sendChan := make(chan []Metric)
-			recvChan := make(chan []Metric)
-			err := sp.plugin.StreamMetrics(context.Background(), recvChan, sendChan, errChan)
+			err := sp.plugin.StreamMetrics(context.Background(), sp.recvChan, sp.sendChan, errChan)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("Successful Call to StreamMetrics", func(c C) {
@@ -82,13 +80,7 @@ func TestStreamMetrics(t *testing.T) {
 				maxMetricsBuffer:   defaultMaxMetricsBuffer,
 				maxCollectDuration: defaultMaxCollectDuration,
 			}
-
-			sendChan := make(chan *rpc.CollectReply)
-			recvChan := make(chan *rpc.CollectArg)
-			s := mockStreamServer{
-				sendChan: sendChan,
-				recvChan: recvChan,
-			}
+			s := mockStreamServer{}
 			go func() {
 				err := sp.StreamMetrics(s)
 				c.So(err, ShouldBeNil)
@@ -108,12 +100,7 @@ func TestStreamMetrics(t *testing.T) {
 				maxMetricsBuffer:   defaultMaxMetricsBuffer,
 				maxCollectDuration: defaultMaxCollectDuration,
 			}
-			sendChan := make(chan *rpc.CollectReply)
-			recvChan := make(chan *rpc.CollectArg)
-			s := mockStreamServer{
-				sendChan: sendChan,
-				recvChan: recvChan,
-			}
+			s := mockStreamServer{}
 			go func() {
 				err := sp.StreamMetrics(s)
 				c.So(err, ShouldBeNil)
@@ -129,13 +116,10 @@ func TestStreamMetrics(t *testing.T) {
 				// Send metrics down to channel every 100 ms
 				pl.doAction(time.Millisecond*100, metrics)
 				select {
-				case mts := <-sendChan:
+				case mts := <-sp.sendChan:
 					// Success! we got something....
 					So(mts, ShouldNotBeNil)
-					So(mts.Metrics_Reply, ShouldNotBeNil)
-					So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
-					So(len(mts.Metrics_Reply.Metrics), ShouldEqual, len(metrics))
-				case <-time.After(time.Second):
+				case <-time.After(1 * time.Second):
 					t.Fatal("timed out waiting for metrics to go through stream collector")
 				}
 			})
@@ -150,12 +134,7 @@ func TestStreamMetrics(t *testing.T) {
 				maxMetricsBuffer:   5,
 				maxCollectDuration: time.Millisecond * 200,
 			}
-			sendChan := make(chan *rpc.CollectReply)
-			recvChan := make(chan *rpc.CollectArg)
-			s := mockStreamServer{
-				sendChan: sendChan,
-				recvChan: recvChan,
-			}
+			s := mockStreamServer{}
 			go func() {
 				err := sp.StreamMetrics(s)
 				c.So(err, ShouldBeNil)
@@ -173,13 +152,10 @@ func TestStreamMetrics(t *testing.T) {
 					// Send metrics down to channel every 20 ms
 					pl.doAction(time.Millisecond*20, metrics)
 					select {
-					case mts := <-sendChan:
+					case mts := <-sp.sendChan:
 						// Success! we got something....
 						So(mts, ShouldNotBeNil)
-						So(mts.Metrics_Reply, ShouldNotBeNil)
-						So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
 						// Expect to get 5 metrics (see value of maxMetricsBuffer)
-						So(len(mts.Metrics_Reply.Metrics), ShouldEqual, sp.maxMetricsBuffer)
 					case <-time.After(time.Second):
 						t.Fatal("timed out waiting for metrics to go through stream collector")
 					}
@@ -190,14 +166,11 @@ func TestStreamMetrics(t *testing.T) {
 					// notice it is longer than set maxCollectDuration
 					pl.doAction(time.Millisecond*300, metrics)
 					select {
-					case mts := <-sendChan:
+					case mts := <-sp.sendChan:
 						// Success! we got something....
 						So(mts, ShouldNotBeNil)
-						So(mts.Metrics_Reply, ShouldNotBeNil)
-						So(mts.Metrics_Reply.Metrics, ShouldNotBeNil)
-						// Expect to get 2 metrics, so even a buffer is not full (its capacity is 5),
-						// data will be send after exceeding maxCollectDuration = 200 ms
-						So(len(mts.Metrics_Reply.Metrics), ShouldEqual, len(metrics))
+					// Expect to get 2 metrics, so even a buffer is not full (its capacity is 5),
+					// data will be send after exceeding maxCollectDuration = 200 ms
 					case <-time.After(time.Second):
 						t.Fatal("timed out waiting for metrics to go through stream collector")
 					}

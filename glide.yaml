@@ -22,16 +22,15 @@ import:
   - convey/gotest
   - convey/reporting
 - package: golang.org/x/net
-  version: 154d9f9ea81208afed560f4cf27b4860c8ed1904
+  version: 054b33e6527139ad5b1ec2f6232c3b175bd9a30c
   subpackages:
   - context
-  - http2
   - http2/hpack
   - internal/timeseries
   - lex/httplex
   - trace
 - package: google.golang.org/grpc
-  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
+  version: ^v1.4
   subpackages:
   - codes
   - credentials
