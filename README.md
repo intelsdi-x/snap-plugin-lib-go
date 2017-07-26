@@ -1,4 +1,4 @@
-## Snap Plugin Library for Go
+## Snap Plugin Library for Go  [![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go) [![Go Report Card](https://goreportcard.com/badge/intelsdi-x/snap-plugin-lib-go)](https://goreportcard.com/report/intelsdi-x/snap-plugin-lib-go)
 
 This is a library for writing plugins in Go for the [Snap telemetry framework](https://github.com/intelsdi-x/snap). 
 
