@@ -5,6 +5,7 @@ go:
 before_install:
 - go get github.com/Masterminds/glide
 - if [ ! -d $SNAP_PLUGIN_LIB_GO_SOURCE ]; then mkdir -p $HOME/gopath/src/github.com/intelsdi-x; ln -s $TRAVIS_BUILD_DIR $SNAP_PLUGIN_LIB_GO_SOURCE; fi # CI for forks not from intelsdi-x
+- go get -u github.com/alecthomas/gometalinter
 env:
   global:
   - SNAP_PLUGIN_LIB_GO_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-lib-go
@@ -16,8 +17,10 @@ install:
   - mkdir -p $TMPDIR
   - cd $SNAP_PLUGIN_LIB_GO_SOURCE 
   - glide install
+  - gometalinter --install
 script:
   - go test -tags=$TEST_TYPE $(glide novendor) -v
+  - gometalinter ./... || true
 notifications:
   email: false
   slack:
