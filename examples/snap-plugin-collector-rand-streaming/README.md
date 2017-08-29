@@ -3,7 +3,7 @@
 Here you will find an example plugin that covers the basics for writing a stream collector plugin.
 
 ## Plugin Naming, Files, and Directory
-For your stream collector plugin, create a new repository and name your plugin project using the following format:
+For your streaming collector plugin, create a new repository and name your plugin project using the following format:
 
 >snap-plugin-[plugin-type]-[plugin-name]
 
@@ -72,13 +72,13 @@ type StreamCollector interface {
 	GetMetricTypes(Config) ([]Metric, error)
 }
 ```
-The interface is slightly different depending on what type (collector, processor, or publisher) of plugin is being written. Please see other plugin types for more details.
+The interface is slightly different depending on what type (collector, processor, or publisher, streaming collector) of plugin is being written. Please see other plugin types for more details.
 
 
 
 ## Starting a plugin
 
-After implementing a type that satisfies one of {collector, processor, publisher} interfaces, all that is left to do is to call the appropriate plugin.StartX() with your plugin specific meta options. For example, with no meta options specified:
+After implementing a type that satisfies one of {collector, processor, publisher, streaming collector} interfaces, all that is left to do is to call the appropriate plugin.StartX() with your plugin specific meta options. For example, with no meta options specified:
 
 ```go
 	plugin.StartStreamCollector(&rand.RandCollector{}, pluginName, pluginVersion)
