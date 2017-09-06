@@ -15,7 +15,7 @@ This is a library for writing plugins in Go for the [Snap telemetry framework](h
 
 ## Writing a Plugin
 
-Snap has three different plugin types and for instructions on how to write a plugin check out the [collector](/examples/snap-plugin-collector-rand/README.md), [processor](examples/snap-plugin-processor-reverse/README.md), and [publisher](examples/snap-plugin-publisher-file/README.md) plugin docs.
+Snap has four different plugin types and for instructions on how to write a plugin check out the [collector](/examples/snap-plugin-collector-rand/README.md), [processor](examples/snap-plugin-processor-reverse/README.md), [publisher](examples/snap-plugin-publisher-file/README.md), and [streaming collector](examples/snap-plugin-collector-rand-streaming/README.md) plugin docs.
 
 ### Before writing a Snap plugin:
 
@@ -33,7 +33,7 @@ A Snap plugin is a program that responds to a set of well defined [gRPC](http://
 
 ## Snap Plugin Go Library Examples:
 
-You will find [example plugins](examples) that cover the basics for writing collector, processor, and publisher plugins in the examples folder.
+You will find [example plugins](examples) that cover the basics for writing collector, processor, publisher, and streaming collector plugins in the examples folder.
 
 
 ## Plugin Flags:

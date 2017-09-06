@@ -1,9 +1,9 @@
 ## Snap Plugin Go Library Examples
-Here you will find example plugins that cover the basics for writing collector, processor, and publisher plugins.
+Here you will find example plugins that cover the basics for writing collector, processor, publisher, and streaming collector plugins.
 
 ## Build Plugins & Use with Snap
 
-To get these example collector, processor, and publisher plugins to build properly and work with Snap you will need to have [glide](https://glide.sh/) installed in your $PATH. You should also add snaptel and snapteld in your $PATH. 
+To get these example plugins to build properly and work with Snap you will need to have [glide](https://glide.sh/) installed in your $PATH. You should also add snaptel and snapteld in your $PATH. 
 
 To test these plugins with Snap, you will need to have [Snap](https://github.com/intelsdi-x/snap) installed, check out these docs for [Snap setup details](https://github.com/intelsdi-x/snap/blob/master/docs/BUILD_AND_TEST.md#getting-started).
 
@@ -45,14 +45,16 @@ $ glide up
 [INFO]	Project relies on 7 dependencies.
 ```
 
-### 3. Build the collector, processor, and/or publisher plugins in the examples folder.
-    Use the `go build` command to generate the example binary files for the collector, processor, and publisher.
+### 3. Build the plugins in the examples folder.
+    Use the `go build` command to generate the example binary files for the collector, processor, publisher and streaming-collector.
     option -o outputs the binary to the specified name
 
 ```
 $ go build -o example-collector examples/snap-plugin-collector-rand/main.go
 $ go build -o example-processor examples/snap-plugin-processor-reverse/main.go
 $ go build -o example-publisher examples/snap-plugin-publisher-file/main.go
+$ go build -o example-streaming-collector examples/snap-plugin-collector-rand-streaming/main.go
+
 ```
 
 ### 4. Run Snap, Load Plugins, and Run Tasks
@@ -132,4 +134,23 @@ task.yml
               config:
                 file: "/tmp/snap_published_grpc_file.log"
 
+```
+
+Here is an example of a task for a streaming collector plugin. This task requires that the [file publisher plugin](snap-plugin-publisher-file) is also loaded. 
+```---
+  version: 1
+  schedule:
+    type: "streaming"
+  workflow:
+    collect:
+      metrics:
+       /random/float: {}
+       /random/integer: {}
+       /random/string: {}
+      publish:
+        -
+            plugin_name: "file"
+            config:
+                file: "/tmp/published_streaming_rand.log"
+              
 ```
