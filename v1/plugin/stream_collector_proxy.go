@@ -9,8 +9,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin/rpc"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
