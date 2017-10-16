@@ -1,9 +1,24 @@
-## Snap Plugin Library for Go  [![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go) [![Go Report Card](https://goreportcard.com/badge/intelsdi-x/snap-plugin-lib-go)](https://goreportcard.com/report/intelsdi-x/snap-plugin-lib-go)
+# Snap Plugin Library for Go  [![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-lib-go) [![Go Report Card](https://goreportcard.com/badge/intelsdi-x/snap-plugin-lib-go)](https://goreportcard.com/report/intelsdi-x/snap-plugin-lib-go)
 
-This is a library for writing plugins in Go for the [Snap telemetry framework](https://github.com/intelsdi-x/snap). 
+This is a library for writing plugins in Go for the [Snap telemetry framework](https://github.com/intelsdi-x/snap).
 
 ----
 
+**Notice:**
+Due to standarization which has been made in [Logrus project](https://github.com/sirupsen/logrus), its import path has been changed from `Sirupsen` to `sirupsen`.
+If you see [case-sensitive import collision reporting by glide](https://user-images.githubusercontent.com/11335874/31628492-232b9e0c-b2b1-11e7-8d3c-3d38914233bc.png) after updating your plugin to the latest snap-plugin-lib-go,
+please do the following steps:
+ - change every import of Logrus to the lower case: `github./com/sirupsen/logrus`,
+ - delete folder `vendor/github.com/Sirupsen`,
+ - rename references in glide.yaml and glide.lock
+ - clear glide cache (`glide -c`),
+ - update dependencies (`glide update`)
+
+More information you can find in [Logrus GitHub repo](https://github.com/sirupsen/logrus/issues/570#issuecomment-313933276).
+
+----
+
+## Table of Contents
 1. [Writing a Plugin](#writing-a-plugin)
     * [Before Writing a Snap Plugin](#before-writing-a-snap-plugin)
 2.  [Brief Overview of Snap Architecture](#brief-overview-of-snap-architecture)
@@ -104,4 +119,5 @@ plugin.AddFlag(
 More information about types of cli flags and options for each flag can be found in the documentation for [urfave/cli](https://github.com/urfave/cli)
 
 
-As always, if you have any questions, please reach out to the Snap team via [Slack](https://intelsdi-x.herokuapp.com/) or by opening an issue in github. 
+As always, if you have any questions, please reach out to the Snap team via [Slack](https://intelsdi-x.herokuapp.com/) or by opening an issue in github.
+
