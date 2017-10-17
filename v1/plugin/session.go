@@ -9,8 +9,8 @@ import (
 
 	"net/http/pprof"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
 )
 
 // Arg represents arguments passed to startup of Plugin

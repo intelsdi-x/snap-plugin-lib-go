@@ -1,6 +1,6 @@
 package: github.com/intelsdi-x/snap-plugin-lib-go
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
   version: ^1.0.2
 - package: github.com/golang/protobuf
   subpackages:
