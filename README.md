@@ -119,5 +119,4 @@ plugin.AddFlag(
 More information about types of cli flags and options for each flag can be found in the documentation for [urfave/cli](https://github.com/urfave/cli)
 
 
-As always, if you have any questions, please reach out to the Snap team via [Slack](https://intelsdi-x.herokuapp.com/) or by opening an issue in github.
-
+As always, if you have any questions, please reach out to the Snap team via [Slack](https://intelsdi-x.herokuapp.com/) or by opening an issue in github. 
