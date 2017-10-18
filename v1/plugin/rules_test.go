@@ -75,24 +75,24 @@ type testCaseBool struct {
 
 func createPassTestCases() []testCaseBool {
 	tc := []testCaseBool{
-		testCaseBool{
+		{
 			input: boolInput{
 				key:  "abc",
 				req:  true,
 				opts: SetDefaultBool(true),
 			},
 		},
-		testCaseBool{
+		{
 			input: boolInput{
 				key:  "abc1",
 				req:  false,
 				opts: SetDefaultBool(false),
 			},
 		},
-		testCaseBool{
+		{
 			input: boolInput{ns: []string{"plop"}, key: "xyz", req: true},
 		},
-		testCaseBool{
+		{
 			input: boolInput{ns: []string{"plop"}, key: "abc2", req: false},
 		},
 	}
@@ -101,13 +101,13 @@ func createPassTestCases() []testCaseBool {
 
 func createErrTestCases() []testCaseBool {
 	tc := []testCaseBool{
-		testCaseBool{
+		{
 			input: boolInput{req: true},
 		},
-		testCaseBool{
+		{
 			input: boolInput{key: "", req: false},
 		},
-		testCaseBool{
+		{
 			input: boolInput{
 				key: "", req: false,
 				opts: SetDefaultBool(false),
@@ -166,10 +166,10 @@ type testCaseFloat struct {
 
 func floatErrTestCases() []testCaseFloat {
 	tc := []testCaseFloat{
-		testCaseFloat{
+		{
 			input: floatInput{req: true},
 		},
-		testCaseFloat{
+		{
 			input: floatInput{key: "", req: false},
 		},
 	}
@@ -178,25 +178,25 @@ func floatErrTestCases() []testCaseFloat {
 
 func floatPassTestCases() []testCaseFloat {
 	tc := []testCaseFloat{
-		testCaseFloat{
+		{
 			input: floatInput{key: "xyz", req: true},
 		},
-		testCaseFloat{
+		{
 			input: floatInput{key: "abc", req: false},
 		},
-		testCaseFloat{
+		{
 			input: floatInput{
 				key:  "xyz1",
 				req:  true,
 				opts: []floatRuleOpt{SetDefaultFloat(30.1)}},
 		},
-		testCaseFloat{
+		{
 			input: floatInput{
 				key:  "xyz2",
 				req:  true,
 				opts: []floatRuleOpt{SetMaxFloat(32.1)}},
 		},
-		testCaseFloat{
+		{
 			input: floatInput{
 				key:  "xyz3",
 				req:  false,
@@ -251,27 +251,27 @@ type testCaseInteger struct {
 
 func integerPassTestCases() []testCaseInteger {
 	tc := []testCaseInteger{
-		testCaseInteger{
+		{
 			input: integerInput{key: "xyz", req: true},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{key: "abc", req: false},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{
 				ns:   []string{"plop"},
 				key:  "xyz1",
 				req:  true,
 				opts: []integerRuleOpt{SetDefaultInt(30)}},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{
 				ns:   []string{"plop"},
 				key:  "xyz2",
 				req:  true,
 				opts: []integerRuleOpt{SetMaxInt(64)}},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{
 				ns:   []string{"plop", "world"},
 				key:  "xyz3",
@@ -284,13 +284,13 @@ func integerPassTestCases() []testCaseInteger {
 
 func integerErrTestCases() []testCaseInteger {
 	tc := []testCaseInteger{
-		testCaseInteger{
+		{
 			input: integerInput{req: true},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{key: "", req: false},
 		},
-		testCaseInteger{
+		{
 			input: integerInput{
 				ns:   []string{"plop"},
 				key:  "",
@@ -348,19 +348,19 @@ type testCaseString struct {
 
 func stringPassTestCases() []testCaseString {
 	tc := []testCaseString{
-		testCaseString{
+		{
 			input: stringInput{key: "xyz", req: true},
 		},
-		testCaseString{
+		{
 			input: stringInput{key: "abc", req: false},
 		},
-		testCaseString{
+		{
 			input: stringInput{
 				key:  "deer",
 				req:  true,
 				opts: SetDefaultString("123")},
 		},
-		testCaseString{
+		{
 			input: stringInput{
 				key:  "racoon",
 				req:  false,
@@ -372,13 +372,13 @@ func stringPassTestCases() []testCaseString {
 
 func stringErrTestCases() []testCaseString {
 	tc := []testCaseString{
-		testCaseString{
+		{
 			input: stringInput{req: true},
 		},
-		testCaseString{
+		{
 			input: stringInput{key: "", req: false},
 		},
-		testCaseString{
+		{
 			input: stringInput{
 				key:  "",
 				req:  true,

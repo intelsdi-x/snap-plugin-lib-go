@@ -198,7 +198,7 @@ type tlsServerDefaultSetup struct {
 // tlsSetup holds TLS setup utility for plugin lib
 var tlsSetup tlsServerSetup = tlsServerDefaultSetup{}
 
-// makeTLSConfig provides TLS configuraton template for plugins, setting
+// makeTLSConfig provides TLS configuration template for plugins, setting
 // required verification of client cert and preferred server suites.
 func (ts tlsServerDefaultSetup) makeTLSConfig() *tls.Config {
 	config := tls.Config{

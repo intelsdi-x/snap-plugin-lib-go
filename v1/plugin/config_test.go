@@ -162,19 +162,19 @@ type testCaseConfig struct {
 
 func configPassTestCases() []testCaseConfig {
 	tc := []testCaseConfig{
-		testCaseConfig{
+		{
 			expected: "rain",
 			input:    "a",
 		},
-		testCaseConfig{
+		{
 			expected: int64(123),
 			input:    "b",
 		},
-		testCaseConfig{
+		{
 			expected: 32.5,
 			input:    "c",
 		},
-		testCaseConfig{
+		{
 			expected: true,
 			input:    "d",
 		},
@@ -184,35 +184,35 @@ func configPassTestCases() []testCaseConfig {
 
 func configErrTestCases() []testCaseConfig {
 	tc := []testCaseConfig{
-		testCaseConfig{
+		{
 			expected: true,
 			input:    "f",
 		},
-		testCaseConfig{
+		{
 			expected: true,
 			input:    "h",
 		},
-		testCaseConfig{
+		{
 			expected: 12.4,
 			input:    "x",
 		},
-		testCaseConfig{
+		{
 			expected: 12.1,
 			input:    "i",
 		},
-		testCaseConfig{
+		{
 			expected: "bbb",
 			input:    "y",
 		},
-		testCaseConfig{
+		{
 			expected: "bbb",
 			input:    "j",
 		},
-		testCaseConfig{
+		{
 			expected: int64(12),
 			input:    "z",
 		},
-		testCaseConfig{
+		{
 			expected: int64(13),
 			input:    "k",
 		},

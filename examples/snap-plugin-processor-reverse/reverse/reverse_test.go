@@ -36,7 +36,7 @@ func TestReverseProcessor(t *testing.T) {
 	Convey("Test Processor", t, func() {
 		Convey("Process int metric", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": "123aB"},
 					Data:      345678,
@@ -52,7 +52,7 @@ func TestReverseProcessor(t *testing.T) {
 		})
 		Convey("Process int32 metric", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": "123aB"},
 					Data:      int32(345678),
@@ -68,7 +68,7 @@ func TestReverseProcessor(t *testing.T) {
 		})
 		Convey("Process int64 metric", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": "123aB"},
 					Data:      int64(345678999999),
@@ -84,7 +84,7 @@ func TestReverseProcessor(t *testing.T) {
 		})
 		Convey("Process float metric", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": 123},
 					Data:      42.42,
@@ -100,7 +100,7 @@ func TestReverseProcessor(t *testing.T) {
 		})
 		Convey("Process float32 metric", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": 123},
 					Data:      float32(24.24),
@@ -117,7 +117,7 @@ func TestReverseProcessor(t *testing.T) {
 		Convey("Process string metric", func() {
 			curTime := time.Now()
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace:   plugin.NewNamespace("x", "y", "z"),
 					Config:      map[string]interface{}{"pw": 123.78},
 					Data:        "luck charm",
