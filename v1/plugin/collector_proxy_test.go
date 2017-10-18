@@ -115,7 +115,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 		m := &rpc.Metric{
 			Namespace:          ns,
@@ -136,7 +136,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 		m := &rpc.Metric{
 			Namespace:          ns,
@@ -157,7 +157,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 
 		m := &rpc.Metric{
@@ -179,7 +179,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 		m := &rpc.Metric{
 			Namespace:          ns,
@@ -200,7 +200,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 		m := &rpc.Metric{
 			Namespace:          ns,
@@ -221,7 +221,7 @@ func getTestMetricData() map[string]*rpc.Metric {
 		val := fmt.Sprintf("val%d", i)
 		desc := fmt.Sprintf("desc%d", i)
 		ns := []*rpc.NamespaceElement{
-			&rpc.NamespaceElement{Name: name, Value: val, Description: desc},
+			{Name: name, Value: val, Description: desc},
 		}
 		m := &rpc.Metric{
 			Namespace:          ns,

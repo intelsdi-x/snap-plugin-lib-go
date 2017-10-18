@@ -154,7 +154,7 @@ type testCaseConfigPolicy struct {
 func configPolicyTestCases() []testCaseConfigPolicy {
 	tc := []testCaseConfigPolicy{
 		// test stringRule with Default value
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				ns:   []string{"a", "b", "c"},
 				key:  "StringWithDefault",
@@ -170,7 +170,7 @@ func configPolicyTestCases() []testCaseConfigPolicy {
 			},
 		},
 		// test stringRule without Default value
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				key: "StringWithoutDefault",
 				req: true,
@@ -182,7 +182,7 @@ func configPolicyTestCases() []testCaseConfigPolicy {
 			},
 		},
 		// test boolRule required
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				ns:   []string{"a1", "b1", "c1"},
 				key:  "boolRequired",
@@ -198,7 +198,7 @@ func configPolicyTestCases() []testCaseConfigPolicy {
 			},
 		},
 		// test boolRule not required
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				key:  "boolNotRequired",
 				req:  false,
@@ -212,7 +212,7 @@ func configPolicyTestCases() []testCaseConfigPolicy {
 			},
 		},
 		// test floatRule
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				ns:   []string{"a2", "b2", "c2"},
 				key:  "float",
@@ -228,7 +228,7 @@ func configPolicyTestCases() []testCaseConfigPolicy {
 			},
 		},
 		// test integerRule
-		testCaseConfigPolicy{
+		{
 			input: inputConfigPolicy{
 				ns:   []string{"a3", "b3", "c3"},
 				key:  "integer",

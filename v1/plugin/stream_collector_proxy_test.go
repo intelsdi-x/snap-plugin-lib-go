@@ -110,9 +110,7 @@ func TestStreamMetrics(t *testing.T) {
 			Convey("get metrics through stream proxy", func() {
 				So(pl.outMetric, ShouldNotBeNil)
 				// Create mocked metrics
-				metrics := []Metric{
-					Metric{},
-				}
+				metrics := []Metric{}
 				// Send metrics down to channel every 100 ms
 				pl.doAction(time.Millisecond*100, metrics)
 				select {

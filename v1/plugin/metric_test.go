@@ -193,7 +193,7 @@ type testCaseMetric struct {
 
 func metricTestCases() []testCaseMetric {
 	tc := []testCaseMetric{
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a", "b", "c"),
 				Version:   0,
@@ -203,14 +203,14 @@ func metricTestCases() []testCaseMetric {
 				},
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a1", "b1", "c1").AddStaticElement("d").AddDynamicElement("charm", "desc").AddStaticElements("x", "y"),
 				Data:      "abc",
 				Unit:      "string",
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a2", "b2", "c2"),
 				Version:   1,
@@ -219,7 +219,7 @@ func metricTestCases() []testCaseMetric {
 				Tags:      map[string]string{"label": "abc"},
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a3", "b3", "c3"),
 				Version:            2,
@@ -230,7 +230,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a4", "b4", "c4"),
 				Version:            3,
@@ -241,7 +241,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a5", "b5", "c5"),
 				Version:            4,
@@ -253,7 +253,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a6", "b6", "c7"),
 				Version:            5,
@@ -264,7 +264,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a8", "b8", "c8"),
 				Version:            6,
@@ -275,7 +275,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a9", "b9", "29"),
 				Version:            7,
@@ -286,7 +286,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a10", "b10", "c10"),
 				Version:            9,
@@ -297,7 +297,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a11", "b11", "c11"),
 				Version:            10,
@@ -308,7 +308,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("a12", "b12", "c12"),
 				Version:            11,
@@ -319,7 +319,7 @@ func metricTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace(NewNamespaceElement("").Value),
 				Version:            10,
@@ -336,7 +336,7 @@ func metricTestCases() []testCaseMetric {
 
 func metricNoDefaultTimeTestCases() []testCaseMetric {
 	tc := []testCaseMetric{
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a", "b", "c"),
 				Version:   0,
@@ -346,14 +346,14 @@ func metricNoDefaultTimeTestCases() []testCaseMetric {
 				},
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a1", "b1", "c1").AddStaticElement("d").AddDynamicElement("charm", "desc").AddStaticElements("x", "y"),
 				Data:      "abc",
 				Unit:      "string",
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a2", "b2", "c2"),
 				Version:   1,
@@ -367,7 +367,7 @@ func metricNoDefaultTimeTestCases() []testCaseMetric {
 
 func metricHasDefaultTimeTestCases() []testCaseMetric {
 	tc := []testCaseMetric{
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace: NewNamespace("a", "b", "c"),
 				Version:   0,
@@ -379,7 +379,7 @@ func metricHasDefaultTimeTestCases() []testCaseMetric {
 				lastAdvertisedTime: time.Now(),
 			},
 		},
-		testCaseMetric{
+		{
 			input: Metric{
 				Namespace:          NewNamespace("x", "y", "z").AddStaticElement("d").AddDynamicElement("charm", "desc").AddStaticElements("r", "s"),
 				Data:               "abc",
@@ -399,7 +399,7 @@ type testCaseMetricConfig struct {
 
 func metricConfigTestCases() []testCaseMetricConfig {
 	tc := []testCaseMetricConfig{
-		testCaseMetricConfig{
+		{
 			input: rpc.ConfigMap{
 				IntMap:    map[string]int64{"abc": 123},
 				StringMap: map[string]string{"xyz": "abc"},
@@ -419,12 +419,12 @@ func metricConfigTestCases() []testCaseMetricConfig {
 
 func metricNamespaceTestCases() []Namespace {
 	nss := []Namespace{
-		Namespace{
+		{
 			NamespaceElement{Value: "a"},
 			NamespaceElement{Value: "b"},
 			NamespaceElement{Value: "c"},
 		},
-		Namespace{
+		{
 			NamespaceElement{Value: "a"},
 			NamespaceElement{Name: "rst", Value: "*", Description: "range"},
 			NamespaceElement{Value: "c"},

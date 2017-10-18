@@ -36,7 +36,7 @@ func TestFilePublisher(t *testing.T) {
 	Convey("Test publish", t, func() {
 		Convey("Publish without a config file", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": "123aB"},
 					Data:      3,
@@ -50,7 +50,7 @@ func TestFilePublisher(t *testing.T) {
 		})
 		Convey("Publish with a config file", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("x", "y", "z"),
 					Config:    map[string]interface{}{"pw": "abc123"},
 					Data:      3,

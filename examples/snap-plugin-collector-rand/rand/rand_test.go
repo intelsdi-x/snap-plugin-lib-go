@@ -36,7 +36,7 @@ func TestRandCollector(t *testing.T) {
 	Convey("Test RandCollector", t, func() {
 		Convey("Collect Integer", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("random", "integer"),
 					Config:    map[string]interface{}{"testint": int64(34)},
 					Data:      34,
@@ -52,7 +52,7 @@ func TestRandCollector(t *testing.T) {
 		})
 		Convey("Collect Float", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("random", "float"),
 					Config:    map[string]interface{}{"testfloat": 3.345},
 					Data:      3.345,
@@ -68,7 +68,7 @@ func TestRandCollector(t *testing.T) {
 		})
 		Convey("Collect String", func() {
 			metrics := []plugin.Metric{
-				plugin.Metric{
+				{
 					Namespace: plugin.NewNamespace("random", "string"),
 					Config:    map[string]interface{}{"teststring": "charm"},
 					Data:      "charm",

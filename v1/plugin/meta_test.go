@@ -48,15 +48,15 @@ type metaTestCase struct {
 
 func metaTestCases() []metaTestCase {
 	tc := []metaTestCase{
-		metaTestCase{
+		{
 			input:  *newMeta(collectorType, "fakeCollector", 0, ConcurrencyCount(0), Exclusive(false), RoutingStrategy(LRURouter), CacheTTL(time.Millisecond*0)),
 			output: meta{Type: collectorType, Name: "fakeCollector", Version: 0, ConcurrencyCount: 0, Exclusive: false, RoutingStrategy: 0, RPCType: gRPC, RPCVersion: 1, Unsecure: true, CacheTTL: time.Millisecond * 0},
 		},
-		metaTestCase{
+		{
 			input:  *newMeta(processorType, "fakeProcessor", 1, ConcurrencyCount(1), Exclusive(true), RoutingStrategy(StickyRouter), CacheTTL(time.Millisecond*1)),
 			output: meta{Type: processorType, Name: "fakeProcessor", Version: 1, ConcurrencyCount: 1, Exclusive: true, RoutingStrategy: 1, RPCType: gRPC, RPCVersion: 1, Unsecure: true, CacheTTL: time.Millisecond * 1},
 		},
-		metaTestCase{
+		{
 			input:  *newMeta(publisherType, "fakePublisher", 10, ConcurrencyCount(8), Exclusive(false), RoutingStrategy(ConfigBasedRouter), CacheTTL(time.Millisecond*1)),
 			output: meta{Type: publisherType, Name: "fakePublisher", Version: 10, ConcurrencyCount: 8, Exclusive: false, RoutingStrategy: 2, RPCType: gRPC, RPCVersion: 1, Unsecure: true, CacheTTL: time.Millisecond * 1},
 		},

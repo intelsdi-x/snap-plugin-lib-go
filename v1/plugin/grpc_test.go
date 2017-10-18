@@ -75,18 +75,18 @@ var (
 	}
 
 	grpcTestPublishConfigMapInput = map[string]Config{
-		"proper/string":  Config{"string": "ok"},
-		"proper/bool":    Config{"bool": true},
-		"proper/float":   Config{"float": float64(-1.2345)},
-		"proper/int":     Config{"int": int64(-234567)},
-		"missing/string": Config{},
-		"missing/bool":   Config{},
-		"missing/float":  Config{},
-		"missing/int":    Config{},
-		"invalid/string": Config{"string": false},
-		"invalid/bool":   Config{"bool": ""},
-		"invalid/float":  Config{"float": ""},
-		"invalid/int":    Config{"int": ""},
+		"proper/string":  {"string": "ok"},
+		"proper/bool":    {"bool": true},
+		"proper/float":   {"float": float64(-1.2345)},
+		"proper/int":     {"int": int64(-234567)},
+		"missing/string": {},
+		"missing/bool":   {},
+		"missing/float":  {},
+		"missing/int":    {},
+		"invalid/string": {"string": false},
+		"invalid/bool":   {"bool": ""},
+		"invalid/float":  {"float": ""},
+		"invalid/int":    {"int": ""},
 	}
 
 	grpcTestPublishConfigMapOutput = map[string]string{
@@ -408,7 +408,7 @@ func TestCollectorFlow(t *testing.T) {
 		})
 		Convey("metrics from GetMetricTypes should be forwarded to caller", func() {
 			mockCollector.doGetMetricTypes = func(_ Config) (dst []Metric, err error) {
-				for k, _ := range grpcTestMetricTypesMap {
+				for k := range grpcTestMetricTypesMap {
 					ns := NewNamespace(strings.Split(k, "/")...)
 					dst = append(dst, Metric{Namespace: ns, Data: int64(0)})
 				}
