@@ -155,13 +155,13 @@ func toProtoConfig(config Config) *rpc.ConfigMap {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
 			reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
 			reflect.Uint32, reflect.Uint64:
-			rpcConfig.IntMap[k] = v.(int64)
+			rpcConfig.IntMap[k] = reflect.ValueOf(v).Int()
 		case reflect.Float32, reflect.Float64:
-			rpcConfig.FloatMap[k] = v.(float64)
+			rpcConfig.FloatMap[k] = reflect.ValueOf(v).Float()
 		case reflect.String:
-			rpcConfig.StringMap[k] = v.(string)
+			rpcConfig.StringMap[k] = reflect.ValueOf(v).String()
 		case reflect.Bool:
-			rpcConfig.BoolMap[k] = v.(bool)
+			rpcConfig.BoolMap[k] = reflect.ValueOf(v).Bool()
 		}
 	}
 	return rpcConfig
