@@ -19,7 +19,10 @@ limitations under the License.
 
 package plugin
 
-import "time"
+import (
+	"time"
+	"google.golang.org/grpc"
+)
 
 type router int
 
@@ -106,6 +109,12 @@ func (t metaRPCType) String() string {
 	}
 }
 
+func GRPCServerOptions(options ...grpc.ServerOption) MetaOpt {
+	return func(m *meta) {
+		m.grpcServerOptions = options
+	}
+}
+
 // meta is the metadata for a plugin
 type meta struct {
 	// A plugin's unique identifier is type:name:version.
@@ -115,15 +124,17 @@ type meta struct {
 	RPCType    metaRPCType
 	RPCVersion int
 
-	ConcurrencyCount int
-	Exclusive        bool
-	Unsecure         bool
-	CacheTTL         time.Duration
-	RoutingStrategy  router
-	CertPath         string
-	KeyPath          string
-	TLSEnabled       bool
-	RootCertPaths    string
+	ConcurrencyCount    int
+	Exclusive           bool
+	Unsecure            bool
+	CacheTTL            time.Duration
+	RoutingStrategy     router
+	CertPath            string
+	KeyPath             string
+	TLSEnabled          bool
+	RootCertPaths       string
+
+	grpcServerOptions   []grpc.ServerOption
 }
 
 // newMeta sets defaults, applies options, and then returns a meta struct
