@@ -22,6 +22,7 @@ package main
 import (
 	"github.com/intelsdi-x/snap-plugin-lib-go/examples/snap-plugin-collector-rand/rand"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -30,5 +31,5 @@ const (
 )
 
 func main() {
-	plugin.StartCollector(rand.RandCollector{}, pluginName, pluginVersion)
+	plugin.StartCollector(rand.RandCollector{}, pluginName, pluginVersion, plugin.GRPCServerOptions(grpc.MaxMsgSize(2 * 1024)))
 }

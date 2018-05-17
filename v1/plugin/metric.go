@@ -21,6 +21,7 @@ package plugin
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -60,6 +61,7 @@ func toProtoMetric(mt Metric) (*rpc.Metric, error) {
 		Tags:        mt.Tags,
 		Unit:        mt.Unit,
 		Description: mt.Description,
+		Config:      toProtoConfig(mt.Config),
 		Timestamp: &rpc.Time{
 			Sec:  mt.Timestamp.Unix(),
 			Nsec: int64(mt.Timestamp.Nanosecond()),
@@ -134,6 +136,35 @@ func fromProtoMetric(mt *rpc.Metric) Metric {
 	}
 
 	return metric
+}
+
+func toProtoConfig(config Config) *rpc.ConfigMap {
+	if len(config) == 0 {
+		return nil
+	}
+
+	rpcConfig := &rpc.ConfigMap{
+		IntMap:    map[string]int64{},
+		StringMap: map[string]string{},
+		FloatMap:  map[string]float64{},
+		BoolMap:   map[string]bool{},
+	}
+	for k, v := range config {
+		t := reflect.TypeOf(v).Kind()
+		switch t {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+			reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+			reflect.Uint32, reflect.Uint64:
+			rpcConfig.IntMap[k] = reflect.ValueOf(v).Int()
+		case reflect.Float32, reflect.Float64:
+			rpcConfig.FloatMap[k] = reflect.ValueOf(v).Float()
+		case reflect.String:
+			rpcConfig.StringMap[k] = reflect.ValueOf(v).String()
+		case reflect.Bool:
+			rpcConfig.BoolMap[k] = reflect.ValueOf(v).Bool()
+		}
+	}
+	return rpcConfig
 }
 
 func fromProtoConfig(config *rpc.ConfigMap) Config {
