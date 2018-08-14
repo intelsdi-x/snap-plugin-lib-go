@@ -73,6 +73,10 @@ var (
 	}
 )
 
+const (
+	killCmdReplyDelay = time.Millisecond * 20
+)
+
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
 type Plugin interface {
 	GetConfigPolicy() (ConfigPolicy, error)
@@ -570,6 +574,7 @@ func startPlugin(c *cli.Context) error {
 			}
 		}()
 		<-pluginProxy.halt
+		waitForGrpcReply()
 
 	} else if libInputOutput.args() > 0 {
 		// snapteld is starting the plugin
@@ -581,6 +586,7 @@ func startPlugin(c *cli.Context) error {
 		libInputOutput.printOut(preamble)
 		go pluginProxy.HeartbeatWatch()
 		<-pluginProxy.halt
+		waitForGrpcReply()
 
 	} else {
 		// no arguments provided - run and display diagnostics to the user
@@ -617,6 +623,13 @@ func startPlugin(c *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+// When pluginProxy.halt is received main goroutine is ended and in result all goroutines are closed by the
+// operating system. There is a race condition resulting in (sometimes) raising log error caused by lack of
+// grpc reply (goroutine is sometimes killed before sending reply to snap agent)
+func waitForGrpcReply() {
+	time.Sleep(killCmdReplyDelay)
 }
 
 func printPreambleAndServe(srv server, m *meta, p *pluginProxy, port string, isPprof bool) (string, error) {
