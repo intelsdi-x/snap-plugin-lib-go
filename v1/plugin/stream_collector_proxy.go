@@ -124,13 +124,15 @@ func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.Str
 	).Debug("starting routine for sending metrics")
 	metrics := []*rpc.Metric{}
 
-	afterCollectDuration := time.After(p.maxCollectDuration)
+	var afterCollectDuration <-chan time.Time
 	for {
 		select {
 		case mts := <-ch:
 			if len(mts) == 0 {
 				break
 			}
+
+			afterCollectDuration = time.After(p.maxCollectDuration)
 
 			for _, mt := range mts {
 				metric, err := toProtoMetric(mt)
@@ -145,6 +147,7 @@ func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.Str
 				if p.maxMetricsBuffer == int64(len(metrics)) {
 					sendReply(taskID, metrics, stream)
 					metrics = []*rpc.Metric{}
+					afterCollectDuration = time.After(p.maxCollectDuration)
 				}
 			}
 
@@ -152,14 +155,12 @@ func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.Str
 			if p.maxMetricsBuffer == 0 {
 				sendReply(taskID, metrics, stream)
 				metrics = []*rpc.Metric{}
-				afterCollectDuration = time.After(p.maxCollectDuration)
 			}
 
 		case <-afterCollectDuration:
 			// send metrics if maxCollectDuration is reached
 			sendReply(taskID, metrics, stream)
 			metrics = []*rpc.Metric{}
-			afterCollectDuration = time.After(p.maxCollectDuration)
 		case <-stream.Context().Done():
 			return
 		}
