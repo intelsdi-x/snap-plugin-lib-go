@@ -74,7 +74,7 @@ var (
 )
 
 const (
-	killCmdReplyDelay = time.Millisecond * 20
+	defaultRpcKillReplyDelay = time.Millisecond * 20
 )
 
 // Plugin is the base plugin type. All plugins must implement GetConfigPolicy.
@@ -574,7 +574,7 @@ func startPlugin(c *cli.Context) error {
 			}
 		}()
 		<-pluginProxy.halt
-		waitForGrpcReply()
+		waitForGrpcReply(arg.RpcKillReplyDelay)
 
 	} else if libInputOutput.args() > 0 {
 		// snapteld is starting the plugin
@@ -586,7 +586,7 @@ func startPlugin(c *cli.Context) error {
 		libInputOutput.printOut(preamble)
 		go pluginProxy.HeartbeatWatch()
 		<-pluginProxy.halt
-		waitForGrpcReply()
+		waitForGrpcReply(arg.RpcKillReplyDelay)
 
 	} else {
 		// no arguments provided - run and display diagnostics to the user
@@ -628,8 +628,12 @@ func startPlugin(c *cli.Context) error {
 // When pluginProxy.halt is received main goroutine is ended and in result all goroutines are closed by the
 // operating system. There is a race condition resulting in (sometimes) raising log error caused by lack of
 // grpc reply (goroutine is sometimes killed before sending reply to snap agent)
-func waitForGrpcReply() {
-	time.Sleep(killCmdReplyDelay)
+func waitForGrpcReply(delay string) {
+	if delayDur, err := time.ParseDuration(delay); err != nil {
+		time.Sleep(defaultRpcKillReplyDelay)
+	} else {
+		time.Sleep(delayDur)
+	}
 }
 
 func printPreambleAndServe(srv server, m *meta, p *pluginProxy, port string, isPprof bool) (string, error) {
@@ -997,5 +1001,10 @@ func processInput(c *cli.Context) (*Arg, error) {
 		arg.MaxMetricsBuffer = c.Int64("max-metrics-buffer")
 	}
 
+	if c.IsSet("rpc-kill-reply-delay") {
+		arg.RpcKillReplyDelay = c.String("rpc-kill-reply-delay")
+	}
+
 	return processArg(arg)
 }
+

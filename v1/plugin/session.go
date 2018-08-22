@@ -40,6 +40,7 @@ type Arg struct {
 
 	MaxCollectDuration string
 	MaxMetricsBuffer   int64
+	RpcKillReplyDelay  string
 }
 
 // processArg is provided *Arg and returns *Arg after unmarshaling the first command line argument which is expected to be valid JSON.
