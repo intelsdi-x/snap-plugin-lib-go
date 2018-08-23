@@ -77,4 +77,9 @@ var (
 		Name:  "max-metrics-buffer",
 		Usage: "maximum number of metrics the plugin is buffering before sending metrics. Defaults to zero what means send metrics immediately.",
 	}
+
+	flKillReplyDelay = cli.StringFlag{
+		Name: "rpc-kill-reply-delay",
+		Usage: "delay after which main thread is ended when rpc KILL message has been received.",
+	}
 )

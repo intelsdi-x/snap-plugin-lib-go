@@ -70,6 +70,7 @@ var (
 		flLogLevel,
 		flMaxCollectDuration,
 		flMaxMetricsBuffer,
+		flKillReplyDelay,
 	}
 )
 
