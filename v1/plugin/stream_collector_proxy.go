@@ -21,7 +21,7 @@ const (
 type StreamProxy struct {
 	pluginProxy
 	plugin StreamCollector
-	ctx	context.Context
+	ctx    context.Context
 
 	// maxMetricsBuffer is the maximum number of metrics the plugin is buffering before sending metrics.
 	// Defaults to zero what means send metrics immediately.
@@ -116,8 +116,8 @@ func (p *StreamProxy) errorSend(errChan chan string, stream rpc.StreamCollector_
 func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.StreamCollector_StreamMetricsServer) {
 	log.WithFields(
 		log.Fields{
-			"_block":			 "metricSend",
-			"task-id":			taskID,
+			"_block":             "metricSend",
+			"task-id":            taskID,
 			"maxMetricsBuffer":   p.maxMetricsBuffer,
 			"maxCollectDuration": p.maxCollectDuration,
 		},
