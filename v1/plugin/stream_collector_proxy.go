@@ -145,6 +145,7 @@ func (p *StreamProxy) metricSend(taskID string, ch chan []Metric, stream rpc.Str
 				if p.maxMetricsBuffer == int64(len(metrics)) {
 					sendReply(taskID, metrics, stream)
 					metrics = []*rpc.Metric{}
+					afterCollectDuration = time.After(p.maxCollectDuration)
 				}
 			}
 
