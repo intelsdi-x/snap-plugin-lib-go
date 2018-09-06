@@ -1,18 +1,15 @@
-hash: 487c97fb40a9826478ed3cd382f933d391da3f8463ffb71e4c0ccfcc545a69ff
-updated: 2017-09-30T13:34:51.196736604-04:00
+hash: 5a92f77296feb1ae292b9e3868d9790067587586b636b0f635d27547b5cd74c6
+updated: 2018-09-06T12:13:59.327756124+02:00
 imports:
 - name: github.com/golang/protobuf
   version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
   subpackages:
   - proto
-  - ptypes
   - ptypes/any
-  - ptypes/duration
-  - ptypes/timestamp
 - name: github.com/julienschmidt/httprouter
   version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
 - name: github.com/sirupsen/logrus
-  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  version: 3e01752db0189b9157070a0e1668a620f9a85da2
 - name: github.com/urfave/cli
   version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
 - name: golang.org/x/crypto
@@ -46,12 +43,12 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: b8669c35455183da6d5c474ea6e72fbf55183274
+  version: b3ddf786825de56a4178401b7e174ee332173b66
   subpackages:
   - codes
   - connectivity
   - credentials
-  - grpclb/grpc_lb_v1/messages
+  - grpclb/grpc_lb_v1
   - grpclog
   - internal
   - keepalive
